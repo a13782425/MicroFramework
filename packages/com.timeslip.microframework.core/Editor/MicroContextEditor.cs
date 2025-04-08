@@ -1,0 +1,564 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
+using UnityEngine;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
+
+namespace MFramework.Core.Editor
+{
+    /// <summary>
+    /// 微游戏编辑器上下文
+    /// </summary>
+
+    public static class MicroContextEditor
+    {
+        /// <summary>
+        /// 必须包含的包
+        /// </summary>
+        internal readonly static string[] RequirePackages = new string[] { "com.unity.nuget.newtonsoft-json" };
+        /// <summary>
+        /// 编辑器资源位置
+        /// </summary>
+        internal readonly static string EDITOR_RESOURCE_PATH = "__MicroEditor";
+        /// <summary>
+        /// 编辑器根目录
+        /// </summary>
+        internal readonly static string EDITOR_ROOT_PATH = "";
+
+        /// <summary>
+        /// 默认配置文件名称
+        /// </summary>
+        internal readonly static string DEFAULT_CONFIG_NAME = "默认配置";
+        /// <summary>
+        /// 最后一次选择的树节点
+        /// </summary>
+        internal const string MICRO_EDITOR_LAST_SELECT_KEY = "__MicroEditorLastSelect";
+
+        /// <summary>
+        /// 编辑器模式变化的方法字典
+        /// </summary>
+        internal readonly static List<Action<PlayModeStateChange>> PlayModeChangedDic = new();
+        /// <summary>
+        /// 编辑器更新的方法字典
+        /// </summary>
+        internal readonly static List<Action> EditorUpdateDic = new List<Action>();
+        /// <summary>
+        /// 日志打印
+        /// </summary>
+        internal static IMicroLogger logger;
+        public static event Action onUpdate;
+
+        private static SerializedObject _editorSerializedObject;
+        /// <summary>
+        /// 编辑器配置序列化对象
+        /// </summary>
+        internal static SerializedObject EditorSerializedObject
+        {
+            get
+            {
+                if (_editorSerializedObject == null)
+                {
+                    _editorSerializedObject = new SerializedObject(MicroEditorConfig.Instance);
+                }
+                if (_editorSerializedObject.targetObject != MicroEditorConfig.Instance)
+                {
+                    _editorSerializedObject = new SerializedObject(MicroEditorConfig.Instance);
+                }
+                return _editorSerializedObject;
+            }
+        }
+        private static SerializedObject _runtimeSerializedObject;
+        /// <summary>
+        /// 运行时配置序列化对象
+        /// </summary>
+        internal static SerializedObject RuntimeSerializedObject
+        {
+            get
+            {
+                if (_runtimeSerializedObject == null)
+                {
+                    _runtimeSerializedObject = new SerializedObject(MicroRuntimeConfig.CurrentConfig);
+                }
+                if (_runtimeSerializedObject.targetObject != MicroRuntimeConfig.CurrentConfig)
+                {
+                    _runtimeSerializedObject = new SerializedObject(MicroRuntimeConfig.CurrentConfig);
+                }
+                return _runtimeSerializedObject;
+            }
+        }
+
+        /// <summary>
+        /// 自定义绘制器字典
+        /// </summary>
+        internal readonly static Dictionary<Type, ICustomDrawer> CustomDrawers = new Dictionary<Type, ICustomDrawer>();
+
+        static MicroContextEditor()
+        {
+            EDITOR_ROOT_PATH = GetScriptPath(typeof(MicroContextEditor));
+        }
+
+        [InitializeOnLoadMethod]
+        private static void UnityOnLoad()
+        {
+            EditorApplication.delayCall += m_delayLoad;
+            logger = MicroLogger.GetMicroLogger("MicroEditor");
+            EditorApplication.update -= m_update;
+            EditorApplication.update += m_update;
+            EditorApplication.playModeStateChanged -= m_playModeStateChanged;
+            EditorApplication.playModeStateChanged += m_playModeStateChanged;
+            m_initMethodInfo();
+            m_initCustomDrawers();
+            m_checkPackage();
+        }
+
+        /// <summary>
+        /// 获取某个脚本的目录
+        /// <para>确保脚本名和类名一致</para>
+        /// </summary>
+        /// <param name="scriptType">脚本类型</param>
+        /// <returns></returns>
+        public static string GetScriptPath(Type scriptType)
+        {
+            string[] guids = AssetDatabase.FindAssets(scriptType.Name + " t:Script");
+            string str = string.Empty;
+            if (guids.Length > 0)
+            {
+                foreach (var item in guids)
+                {
+                    string filePath = AssetDatabase.GUIDToAssetPath(item);
+                    var mono = AssetDatabase.LoadAssetAtPath<MonoScript>(filePath);
+                    if (mono == null)
+                        continue;
+                    if (mono.GetClass().FullName == scriptType.FullName)
+                    {
+                        str = Path.GetDirectoryName(filePath);
+                        break;
+                    }
+                }
+            }
+            return str;
+        }
+        /// <summary>
+        /// 获取最后一次选择的树节点
+        /// </summary>
+        /// <returns></returns>
+        public static string GetLastSelectTreeNode() => EditorPrefs.GetString(MICRO_EDITOR_LAST_SELECT_KEY, "");
+        /// <summary>
+        /// 设置最后一次选择的树节点
+        /// </summary>
+        /// <param name="path"></param>
+        public static void SetLastSelectTreeNode(string path) => EditorPrefs.SetString(MICRO_EDITOR_LAST_SELECT_KEY, path);
+
+        /// <summary>
+        /// 获取所有运行时配置文件名称
+        /// </summary>
+        /// <returns></returns>
+        public static List<MicroDropdownContent.ValueItem> GetRuntimeConfigNames()
+        {
+            List<MicroDropdownContent.ValueItem> names = new List<MicroDropdownContent.ValueItem>();
+            string[] guids = AssetDatabase.FindAssets("t:MicroRuntimeConfig");
+            if (guids.Length > 0)
+            {
+                foreach (var guid in guids)
+                {
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    MicroRuntimeConfig config = AssetDatabase.LoadAssetAtPath<MicroRuntimeConfig>(path);
+                    if (config == null)
+                        continue;
+                    names.Add(new MicroDropdownContent.ValueItem { value = path, displayName = config.ConfigName });
+                }
+            }
+            return names;
+        }
+
+        /// <summary>
+        /// 加载资源文件夹下的资源
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static T LoadRes<T>(string path) where T : UnityEngine.Object
+        {
+            return Resources.Load<T>(Path.Combine(EDITOR_RESOURCE_PATH, path));
+        }
+        /// <summary>
+        /// 获取自定义绘制器
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        internal static ICustomDrawer GetCustomDrawer(Type type)
+        {
+            ICustomDrawer drawer = null;
+            foreach (var item in CustomDrawers)
+            {
+                if (IsMatchType(item.Key, type))
+                {
+                    drawer = item.Value;
+                    break;
+                }
+            }
+            return drawer;
+            static bool IsMatchType(Type drawerType, Type targetType)
+            {
+                // 1. 精确匹配类型
+                if (drawerType == targetType) return true;
+
+                // 2. 匹配基类
+                if (drawerType.IsAssignableFrom(targetType)) return true;
+
+                // 3. 匹配泛型定义
+                if (drawerType.IsGenericTypeDefinition &&
+                    targetType.IsGenericType &&
+                    drawerType == targetType.GetGenericTypeDefinition())
+                {
+                    return true;
+                }
+
+                // 4. 匹配数组
+                if (drawerType.IsArray && targetType.IsArray)
+                {
+                    return IsMatchType(
+                        drawerType.GetElementType(),
+                        targetType.GetElementType());
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取字段自定义绘制器
+        /// </summary>
+        /// <param name="fieldInfo"></param>
+        /// <returns></returns>
+        internal static IEnumerable<ICustomDrawer> GetCustomDrawers(FieldInfo fieldInfo)
+        {
+            List<ICustomDrawer> drawers = new List<ICustomDrawer>();
+            var drawer = GetCustomDrawer(fieldInfo.FieldType);
+            if (drawer != null)
+                drawers.Add(drawer);
+            foreach (var item in fieldInfo.GetCustomAttributesData())
+            {
+                drawer = GetCustomDrawer(item.AttributeType);
+                if (drawer != null)
+                    drawers.Add(drawer);
+            }
+            return drawers;
+        }
+
+
+        /// <summary>
+        /// 获取当前的窗口
+        /// </summary>
+        /// <returns></returns>
+        internal static MicroEditorWindow GetMicroEditorWindow()
+        {
+            return EditorWindow.GetWindow<MicroEditorWindow>(true);
+        }
+        /// <summary>
+        /// 获取所有微框架布局
+        /// </summary>
+        /// <returns></returns>
+        internal static List<MicroLayoutModel> GetMicroLayouts()
+        {
+            List<MicroLayoutModel> models = new List<MicroLayoutModel>();
+            TypeCache.TypeCollection list = TypeCache.GetTypesDerivedFrom<BaseMicroLayout>();
+            Type defautType = typeof(DefaultMicroLayout);
+            foreach (var item in list)
+            {
+                if (!item.IsAbstract && !item.IsInterface && item != defautType)
+                {
+                    var constructors = item.GetConstructors();
+                    if (constructors.FirstOrDefault(a => a.GetParameters().Length == 0) != null)
+                    {
+                        BaseMicroLayout layout = Activator.CreateInstance(item) as BaseMicroLayout;
+                        models.Add(new MicroLayoutModel(layout));
+                    }
+                    else
+                    {
+                        logger.LogError($"类型:{item.Name},没有无参构造函数");
+                    }
+                }
+            }
+            return models;
+        }
+        /// <summary>
+        /// 检查配置文件
+        /// </summary>
+        internal static void CheckConfig()
+        {
+            bool isRefresh = false;
+
+            m_checkEditorConfig(ref isRefresh);
+            m_checkRuntimeConfig(ref isRefresh);
+            if (isRefresh)
+            {
+                AssetDatabase.Refresh();
+            }
+        }
+        /// <summary>
+        /// 打开设置
+        /// </summary>
+        [MenuItem("MFramework/Preferences", priority = -99)]
+        private static void m_openPreferences()
+        {
+            GetMicroEditorWindow();
+        }
+
+        private static void m_delayLoad()
+        {
+            EditorApplication.delayCall -= m_delayLoad;
+            CheckConfig();
+        }
+
+        private static void m_playModeStateChanged(PlayModeStateChange state)
+        {
+            try
+            {
+                foreach (var item in PlayModeChangedDic)
+                {
+                    item.Invoke(state);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 编辑器下更新
+        /// </summary>
+        private static void m_update()
+        {
+            try
+            {
+                onUpdate?.Invoke();
+                foreach (var item in EditorUpdateDic)
+                {
+                    item.Invoke();
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 检测编辑器配置
+        /// </summary>
+        /// <param name="isRefresh"></param>
+        private static void m_checkEditorConfig(ref bool isRefresh)
+        {
+            string[] guids = AssetDatabase.FindAssets("t:MicroEditorConfig");
+            MicroEditorConfig editorConfig = default;
+            if (guids.Length == 0)
+            {
+                //创建配置
+                string configFile = "Assets/Editor/MicroEditorConfig.asset";
+                editorConfig = ScriptableObject.CreateInstance<MicroEditorConfig>();
+                if (!Directory.Exists(Path.Combine(Application.dataPath, "Editor")))
+                {
+                    Directory.CreateDirectory(Path.Combine(Application.dataPath, "Editor"));
+                }
+                AssetDatabase.CreateAsset(editorConfig, configFile);
+                AssetDatabase.SetMainObject(editorConfig, configFile);
+                isRefresh = true;
+            }
+            else
+            {
+                //加载配置
+                if (guids.Length > 1)
+                {
+                    MicroLogger.LogWarning("编辑器配置存在多个，只会加载其中一个");
+                }
+                string configGuid = guids[0];
+                editorConfig = AssetDatabase.LoadAssetAtPath<MicroEditorConfig>(AssetDatabase.GUIDToAssetPath(configGuid));
+                if (editorConfig.Configs != null)
+                {
+                    editorConfig.Configs.RemoveAll(a => a == null);
+                }
+            }
+            TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<ICustomMicroEditorConfig>();
+            foreach (var type in types)
+            {
+                if (type.GetCustomAttribute<IgnoreAttribute>() != null)
+                    continue;
+                if (type.IsAbstract || type.IsValueType || type.IsGenericType)
+                {
+                    continue;
+                }
+                if (editorConfig.Configs.FirstOrDefault(a => a.GetType() == type) != null)
+                    continue;
+                ICustomMicroEditorConfig config = (ICustomMicroEditorConfig)Activator.CreateInstance(type);
+                editorConfig.Configs.Add(config);
+                isRefresh = true;
+            }
+        }
+
+        /// <summary>
+        /// 获取运行时配置
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        internal static MicroRuntimeConfig GetRuntimeConfig(string filePath = "Assets/Resources/MicroRuntimeConfig.asset")
+        {
+            MicroRuntimeConfig runtimeConfig = AssetDatabase.LoadAssetAtPath<MicroRuntimeConfig>(filePath);
+            if (runtimeConfig == null)
+            {
+                runtimeConfig = ScriptableObject.CreateInstance<MicroRuntimeConfig>();
+                AssetDatabase.CreateAsset(runtimeConfig, filePath);
+                AssetDatabase.SetMainObject(runtimeConfig, filePath);
+            }
+            TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<ICustomMicroRuntimeConfig>();
+            foreach (var type in types)
+            {
+                if (type.GetCustomAttribute<IgnoreAttribute>() != null)
+                    continue;
+                if (type.IsAbstract || type.IsValueType || type.IsGenericType)
+                    continue;
+                if (runtimeConfig.Configs.FirstOrDefault(a => a.GetType() == type) != null)
+                    continue;
+                if (runtimeConfig.Configs.FirstOrDefault(a => a.GetType() == type) != null)
+                    continue;
+                ICustomMicroRuntimeConfig config = (ICustomMicroRuntimeConfig)Activator.CreateInstance(type);
+                runtimeConfig.Configs.Add(config);
+            }
+            return runtimeConfig;
+        }
+
+        /// <summary>
+        /// 检测运行时配置
+        /// </summary>
+        /// <param name="isRefresh"></param>
+        private static void m_checkRuntimeConfig(ref bool isRefresh)
+        {
+            GetRuntimeConfig();
+            //string[] guids = AssetDatabase.FindAssets("t:MicroRuntimeConfig");
+            //MicroRuntimeConfig runtimeConfig = default;
+            //if (guids.Length == 0)
+            //{
+            //    //创建配置
+            //    string configFile = "Assets/Resources/MicroRuntimeConfig.asset";
+            //    runtimeConfig = ScriptableObject.CreateInstance<MicroRuntimeConfig>();
+            //    if (!Directory.Exists(Path.Combine(Application.dataPath, "Resources")))
+            //    {
+            //        Directory.CreateDirectory(Path.Combine(Application.dataPath, "Resources"));
+            //    }
+            //    AssetDatabase.CreateAsset(runtimeConfig, configFile);
+            //    AssetDatabase.SetMainObject(runtimeConfig, configFile);
+            //    isRefresh = true;
+            //}
+            //else
+            //{
+            //    //加载配置
+            //    if (guids.Length > 1)
+            //    {
+            //        MicroLogger.LogWarning("编辑器配置存在多个，只会加载其中一个");
+            //    }
+            //    string configGuid = guids[0];
+            //    runtimeConfig = AssetDatabase.LoadAssetAtPath<MicroRuntimeConfig>(AssetDatabase.GUIDToAssetPath(configGuid));
+            //    if (runtimeConfig.Configs != null)
+            //    {
+            //        runtimeConfig.Configs.RemoveAll(a => a == null);
+            //    }
+            //}
+            //TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<CustomMicroRuntimeConfig>();
+            //foreach (var type in types)
+            //{
+            //    if (type.GetCustomAttribute<IgnoreAttribute>() != null)
+            //        continue;
+            //    if (type.IsAbstract || type.IsValueType || type.IsGenericType)
+            //        continue;
+            //    if (runtimeConfig.Configs.FirstOrDefault(a => a.GetType() == type) != null)
+            //        continue;
+            //    CustomMicroRuntimeConfig config = (CustomMicroRuntimeConfig)Activator.CreateInstance(type);
+            //    runtimeConfig.Configs.Add(config);
+            //    isRefresh = true;
+            //}
+        }
+        /// <summary>
+        /// 检查Package包
+        /// </summary>
+        private static void m_checkPackage()
+        {
+            PackageInfo[] packages = PackageInfo.GetAllRegisteredPackages();
+            List<string> tempList = new List<string>();
+            foreach (var item in RequirePackages)
+            {
+                if (packages.FirstOrDefault(a => a.name == item) == null)
+                {
+                    tempList.Add(item);
+                }
+            }
+            foreach (string packageName in tempList)
+            {
+                AddRequest add = Client.Add(packageName);
+            }
+        }
+
+        /// <summary>
+        /// 初始化自定义绘制器
+        /// </summary>
+        private static void m_initCustomDrawers()
+        {
+            CustomDrawers.Clear();
+            TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<ICustomDrawer>();
+            foreach (var type in types)
+            {
+                if (type.GetCustomAttribute<IgnoreAttribute>() != null)
+                    continue;
+                if (type.IsAbstract || type.IsValueType || type.IsGenericType)
+                    continue;
+                CustomDrawerAttribute customDrawerAttribute = type.GetCustomAttribute<CustomDrawerAttribute>();
+                if (customDrawerAttribute == null)
+                    continue;
+                if (customDrawerAttribute.TargetType == null)
+                    continue;
+                Type targetType = customDrawerAttribute.TargetType;
+                ICustomDrawer drawer = (ICustomDrawer)Activator.CreateInstance(type);
+                if (CustomDrawers.ContainsKey(targetType))
+                {
+                    if (drawer.Priority <= CustomDrawers[targetType].Priority)
+                        continue;
+                }
+                CustomDrawers.Add(targetType, drawer);
+            }
+
+        }
+        /// <summary>
+        /// 初始化编辑器变化和Update的方法
+        /// </summary>
+        private static void m_initMethodInfo()
+        {
+            MicroContextEditor.EditorUpdateDic.Clear();
+            MicroContextEditor.PlayModeChangedDic.Clear();
+            foreach (var item in TypeCache.GetMethodsWithAttribute<PlayModeChangedAttribute>())
+            {
+                if (!item.IsStatic)
+                    continue;
+                var @params = item.GetParameters();
+                if (@params.Length != 1)
+                    continue;
+                if (@params[0].ParameterType != typeof(PlayModeStateChange))
+                    continue;
+                MicroContextEditor.PlayModeChangedDic.Add((Action<PlayModeStateChange>)item.CreateDelegate(typeof(Action<PlayModeStateChange>)));
+            }
+            foreach (var item in TypeCache.GetMethodsWithAttribute<EditorUpdateAttribute>())
+            {
+                if (!item.IsStatic)
+                    continue;
+                var @params = item.GetParameters();
+                if (@params.Length != 0)
+                    continue;
+                MicroContextEditor.EditorUpdateDic.Add((Action)item.CreateDelegate(typeof(Action)));
+            }
+        }
+    }
+}

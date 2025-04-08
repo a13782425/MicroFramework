@@ -1,0 +1,20 @@
+{
+    "name": "MFramework.Entity.Editor",
+    "rootNamespace": "MFramework.Editor",
+    "references": [
+        "GUID:afc4e8d280ae4c94eb0253f659341780",
+        "GUID:bb385a198e6e182428e76c1aac265e89",
+        "GUID:272b3311f487c364595a2f4243959898"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

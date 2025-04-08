@@ -1,0 +1,3 @@
+﻿.micro-object-field__header {
+	flex-direction: row;
+}

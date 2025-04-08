@@ -1,0 +1,22 @@
+{
+    "name": "MFramework.YooAsset.Editor",
+    "rootNamespace": "MFramework.Editor",
+    "references": [
+        "MFramework.Core",
+        "MFramework.Core.Editor",
+        "MFramework.YooAsset.Runtime",
+        "Unity.ScriptableBuildPipeline",
+        "Unity.ScriptableBuildPipeline.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

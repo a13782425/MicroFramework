@@ -1,0 +1,14 @@
+{
+  "name": "com.timeslip.microframework.resource",
+  "displayName": "MFramework.Resource",
+  "version": "0.1.0-pre.1",
+  "unity": "2021.3",
+  "author": {
+    "name": "timeslip"
+  },
+  "changelogUrl": "http://blog.timeslip.cn/archives/microframework.resource-geng-xin-ri-zhi",
+  "description": "\u5fae\u6846\u67b6\u9ed8\u8ba4\u8d44\u6e90\u5e93",
+  "dependencies": {
+    "com.timeslip.microframework.core": "0.1.0-pre.1"
+  }
+}

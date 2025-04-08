@@ -1,0 +1,6 @@
+
+.visual-splitter {
+	flex-grow: 1;
+	flex-shrink: 0;
+	flex-direction: row;
+}

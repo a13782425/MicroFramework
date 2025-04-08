@@ -1,0 +1,34 @@
+MTreeView {
+	flex-grow: 1;
+}
+
+MTreeView > .tree-view_list-view{
+	flex: 1 0 0;
+}
+MTreeView > .tree-view-item-indent-content{
+	flex-direction: row;
+	flex-shrink: 0;
+}
+MTreeView .tree-view-item-indent{
+	width: 8px;
+	flex-shrink: 0;
+}
+MTreeView .tree-view-item -> Toggle{
+	align-items: center;
+	margin-bottom: 0px;
+	margin-right: 1px;
+}
+
+MTreeView .tree-view-item -> Label{
+	-unity-text-align: middle-center;
+}
+
+MTreeView .tree-view-item{
+	margin: 2px;
+}
+
+MTreeView .tree-view-item:checked{
+	border-width: 1px;
+	border-color: rgba(89,105,130,1);
+	background-color: rgba(64,69,77,1);
+}

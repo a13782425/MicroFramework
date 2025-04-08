@@ -1,0 +1,18 @@
+{
+    "name": "MFramework.Timer.Editor",
+    "rootNamespace": "MFramework.Editor",
+    "references": [
+        "GUID:0bc9c4803d354814193d9a1dec45a1db"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
