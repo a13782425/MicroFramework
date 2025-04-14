@@ -10,6 +10,7 @@
   "description": "\u5fae\u6846\u67b6UI\u5e93,MVVM\u5b9e\u73b0",
   "dependencies": {
     "com.timeslip.microframework.core": "0.1.0-pre.1",
+    "com.timeslip.microframework.bindable": "0.1.0-pre.1",
     "com.timeslip.microframework.resource": "0.1.0-pre.1"
   }
 }

@@ -24,7 +24,13 @@ namespace MFramework.Core
     /// </summary>
     public static class MicroContext
     {
+        /// <summary>
+        /// 模块接口类型
+        /// </summary>
+        internal static readonly Type MODULE_INTERFACE_TYPE = typeof(IMicroModule);
 
+        [ThreadStatic]
+        private static List<string> aliasNameList = default;
         #region prop
 
         /// <summary>
@@ -96,10 +102,6 @@ namespace MFramework.Core
         /// 模块是否准备完毕
         /// </summary>
         private static bool _isModuleReady = false;
-        /// <summary>
-        /// 环境变量
-        /// </summary>
-        private static BindableDictionary<string, object> _envVars = new BindableDictionary<string, object>();
         /// <summary>
         /// 是否已经启动
         /// </summary>
@@ -207,7 +209,7 @@ namespace MFramework.Core
         /// <returns></returns>
         public static T RegisterModule<T>() where T : class, IMicroModule, new()
         {
-            string moduleName = typeof(T).Name;
+            string moduleName = typeof(T).FullName;
             if (InternalMicroData.moduleAlias.ContainsKey(moduleName))
             {
                 logger.LogError($"当前模块已存在，模块名：{moduleName}");
@@ -228,7 +230,7 @@ namespace MFramework.Core
         public static bool RemoveModule<T>() where T : class, IMicroModule, new()
         {
             Type rmType = typeof(T);
-            ModuleDescribeLinkedNode linkedNode = m_getModuleDescribeLinkedNode(rmType.Name);
+            ModuleAliasDescribe linkedNode = m_getModuleDescribeLinkedNode(rmType.Name);
             ModuleDescribe moduleDescribe = null;
             while (linkedNode != null)
             {
@@ -237,7 +239,7 @@ namespace MFramework.Core
                     moduleDescribe = linkedNode.module;
                     break;
                 }
-                linkedNode = linkedNode.nextNode;
+                linkedNode = linkedNode.child;
             }
             if (moduleDescribe == null)
                 throw new ArgumentException($"当前模块不存在，请先注册，模块名：{rmType.Name}");
@@ -252,24 +254,24 @@ namespace MFramework.Core
                     if (!InternalMicroData.moduleAlias.ContainsKey(item))
                         continue;
                     linkedNode = InternalMicroData.moduleAlias[item];
-                    if (linkedNode.module == moduleDescribe && linkedNode.nextNode == null)
+                    if (linkedNode.module == moduleDescribe && linkedNode.child == null)
                         InternalMicroData.moduleAlias.Remove(item);
-                    else if (linkedNode.module == moduleDescribe && linkedNode.nextNode != null)
-                        InternalMicroData.moduleAlias.Add(item, linkedNode.nextNode);
+                    else if (linkedNode.module == moduleDescribe && linkedNode.child != null)
+                        InternalMicroData.moduleAlias.Add(item, linkedNode.child);
                     else if (linkedNode.module != moduleDescribe)
                     {
-                        ModuleDescribeLinkedNode nextNode = linkedNode.nextNode;
+                        ModuleAliasDescribe nextNode = linkedNode.child;
                         while (nextNode != null)
                         {
                             if (nextNode.module == moduleDescribe)
                             {
-                                linkedNode.nextNode = nextNode.nextNode;
+                                linkedNode.child = nextNode.child;
                                 break;
                             }
                             else
                             {
                                 linkedNode = nextNode;
-                                nextNode = nextNode.nextNode;
+                                nextNode = nextNode.child;
                             }
                         }
                     }
@@ -284,7 +286,6 @@ namespace MFramework.Core
             }
 
         }
-
 
         /// <summary>
         /// 获取一个模块，可以使用注册时候的类型，或者接口获取
@@ -471,66 +472,6 @@ namespace MFramework.Core
         }
 
         /// <summary>
-        /// 设置环境变量
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        public static void SetEnv<T>(string key, T value = default)
-        {
-            Assert(!string.IsNullOrWhiteSpace(key), "环境变量的Key为空");
-            if (_envVars.ContainsKey(key))
-                _envVars[key] = value;
-            else
-                _envVars.Add(key, value);
-        }
-        /// <summary>
-        /// 获取环境变量
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        public static T GetEnv<T>(string key)
-        {
-            Assert(!string.IsNullOrWhiteSpace(key), "环境变量的Key为空");
-            if (_envVars.ContainsKey(key))
-                return (T)_envVars[key];
-            return default(T);
-        }
-        /// <summary>
-        /// 移除环境变量
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        public static void DelEnv(string key)
-        {
-            Assert(!string.IsNullOrWhiteSpace(key), "环境变量的Key为空");
-            _envVars.Remove(key);
-        }
-        /// <summary>
-        /// 订阅环境变量
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        public static void SubscribeEnv(string key, BindableDelegate<object> action)
-        {
-            Assert(!string.IsNullOrWhiteSpace(key) && action != null, "环境变量的Key为空");
-            _envVars.Subscribe(key, action);
-        }
-        /// <summary>
-        /// 取消订阅环境变量
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        public static void UnsubscribeEnv(string key, BindableDelegate<object> action)
-        {
-            Assert(!string.IsNullOrWhiteSpace(key) && action != null, "环境变量的Key为空");
-            _envVars.Unsubscribe(key, action);
-        }
-        /// <summary>
         /// 断言
         /// </summary>
         /// <param name="condition">条件</param>
@@ -622,11 +563,11 @@ namespace MFramework.Core
             string[] aliasNames = m_getModuleAliasNames(tType);
             foreach (var item in aliasNames)
             {
-                ModuleDescribeLinkedNode linkedNode = new ModuleDescribeLinkedNode(describe);
+                ModuleAliasDescribe linkedNode = new ModuleAliasDescribe(describe);
                 if (InternalMicroData.moduleAlias.ContainsKey(item))
                 {
-                    ModuleDescribeLinkedNode temp = InternalMicroData.moduleAlias[item];
-                    linkedNode.nextNode = temp;
+                    ModuleAliasDescribe temp = InternalMicroData.moduleAlias[item];
+                    linkedNode.child = temp;
                 }
                 InternalMicroData.moduleAlias.Add(item, linkedNode);
             }
@@ -640,16 +581,25 @@ namespace MFramework.Core
         /// <returns></returns>
         private static string[] m_getModuleAliasNames(Type moduleType)
         {
-            Type baseType = typeof(IMicroModule);
-            List<string> names = new List<string>() { moduleType.Name };
+            List<string> names = getAliasNameList();
+            names.Add(moduleType.FullName);
             Type[] interfaceTypes = moduleType.GetInterfaces();
-            foreach (var item in interfaceTypes)
+            foreach (var interfaceType in interfaceTypes)
             {
-                if (item != baseType)
+                if (interfaceType != MODULE_INTERFACE_TYPE && MODULE_INTERFACE_TYPE.IsAssignableFrom(interfaceType))
                 {
-                    if (item.GetInterfaces().Contains(baseType))
-                        names.Add(item.Name);
+                    names.Add(interfaceType.FullName);
                 }
+            }
+            // 只检查父类类型名称
+            Type? baseType = moduleType.BaseType;
+            while (baseType != null && baseType != typeof(object))
+            {
+                if (MODULE_INTERFACE_TYPE.IsAssignableFrom(baseType))
+                {
+                    names.Add(baseType.FullName);
+                }
+                baseType = baseType.BaseType;
             }
             return names.ToArray();
         }
@@ -734,7 +684,7 @@ namespace MFramework.Core
         /// </summary>
         /// <param name="moduleName"></param>
         /// <returns></returns>
-        private static ModuleDescribeLinkedNode m_getModuleDescribeLinkedNode(string moduleName)
+        private static ModuleAliasDescribe m_getModuleDescribeLinkedNode(string moduleName)
         {
             if (InternalMicroData.moduleAlias.ContainsKey(moduleName))
                 return InternalMicroData.moduleAlias[moduleName];
@@ -749,6 +699,21 @@ namespace MFramework.Core
         {
             InternalMicroData.allModuleContainer.Remove(moduleDescribe);
         }
+
+        /// <summary>
+        /// 获取别名列表,避免重复创建
+        /// </summary>
+        /// <returns></returns>
+        private static List<string> getAliasNameList()
+        {
+            if (aliasNameList == null)
+                aliasNameList = new List<string>();
+            else
+                aliasNameList.Clear();
+            return aliasNameList;
+        }
+
+
         private static void m_update()
         {
             try

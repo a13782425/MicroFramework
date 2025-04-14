@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MFramework.Core
 {
@@ -10,15 +7,25 @@ namespace MFramework.Core
     /// 微框架的静态数据
     /// </summary>
     internal static class InternalMicroData
-    {
+    {  
         /// <summary>
         /// 模块的别名
         /// </summary>
-        internal static DelayDictionary<string, ModuleDescribeLinkedNode> moduleAlias = new DelayDictionary<string, ModuleDescribeLinkedNode>();
+        internal static DelayDictionary<string, ModuleAliasDescribe> moduleAlias = new DelayDictionary<string, ModuleAliasDescribe>();
         /// <summary>
         /// 所有模块
-        /// </summary>
+        /// </summa>
         internal readonly static DelayList<ModuleDescribe> allModuleContainer = new DelayList<ModuleDescribe>();
+
+        /// <summary>
+        /// 当前模块
+        /// </summary>
+        internal static ModuleDescribe moduleDescribe = default;
+
+        /// <summary>
+        /// 所有模块的缓存
+        /// </summary>
+        internal readonly static Dictionary<Type, ModuleDescribe> cacheModuleDict = new Dictionary<Type, ModuleDescribe>();
 
         /// <summary>
         /// 更新对象开头

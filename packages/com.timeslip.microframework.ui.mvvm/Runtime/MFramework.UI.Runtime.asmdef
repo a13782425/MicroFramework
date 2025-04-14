@@ -3,6 +3,7 @@
     "rootNamespace": "MFramework.Runtime",
     "references": [
         "GUID:afc4e8d280ae4c94eb0253f659341780",
+        "GUID:371748e82bde03b488fb7b81b5614e11",
         "GUID:e8582340c4c2a494b814e2f98c4d087d",
         "GUID:6055be8ebefd69e48b49212b09b47b2f"
     ],

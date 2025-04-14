@@ -1,11 +1,13 @@
 {
-    "name": "MFramework.Entity.Runtime",
-    "rootNamespace": "MFramework.Runtime",
+    "name": "MFramework.Bindable.Editor",
+    "rootNamespace": "MFramework.Editor",
     "references": [
-        "GUID:afc4e8d280ae4c94eb0253f659341780",
-        "GUID:371748e82bde03b488fb7b81b5614e11"
+        "MFramework.Bindable.Runtime",
+        "MFramework.Core.Editor"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

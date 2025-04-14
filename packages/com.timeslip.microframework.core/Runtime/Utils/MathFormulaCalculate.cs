@@ -1199,7 +1199,6 @@ namespace MFramework.Core
             private int _tokenIndex = 0;        //当前token索引
             private int _tokenLength = 0;       //当前token长度
             private Token _curToken;        //当前token,
-            private Token _tempToken;       //临时token
             private List<Token> _curTokenList;
             private Stack<int> _argCounts = new Stack<int>();  // 用于存储每个函数的参数计数
             internal MathFormulaParser(MathFormulaCalculate calculate)

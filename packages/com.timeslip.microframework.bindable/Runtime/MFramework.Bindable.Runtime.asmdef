@@ -1,9 +1,8 @@
 {
-    "name": "MFramework.Entity.Runtime",
+    "name": "MFramework.Bindable.Runtime",
     "rootNamespace": "MFramework.Runtime",
     "references": [
-        "GUID:afc4e8d280ae4c94eb0253f659341780",
-        "GUID:371748e82bde03b488fb7b81b5614e11"
+        "GUID:afc4e8d280ae4c94eb0253f659341780"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using Object = UnityEngine.Object;
-using System.Reflection;
 #if UNITY_EDITOR
-using UnityEditor;
 #endif
 
 namespace MFramework.Core
@@ -16,11 +15,21 @@ namespace MFramework.Core
     }
 #endif
 
-    internal class ModuleDescribeLinkedNode
+    /// <summary>
+    /// 模块别名描述
+    /// </summary>
+    internal class ModuleAliasDescribe
     {
         internal readonly ModuleDescribe module;
-        internal ModuleDescribeLinkedNode nextNode;
-        internal ModuleDescribeLinkedNode(ModuleDescribe module)
+        /// <summary>
+        /// 模块别名链表中的上一个模块
+        /// </summary>
+        internal ModuleAliasDescribe parent;
+        /// <summary>
+        /// 模块别名链表中的下一个模块
+        /// </summary>
+        internal ModuleAliasDescribe child;
+        internal ModuleAliasDescribe(ModuleDescribe module)
         {
             this.module = module;
         }
@@ -31,10 +40,6 @@ namespace MFramework.Core
     /// </summary>
     internal class ModuleDescribe
     {
-        /// <summary>
-        /// 模块接口类型
-        /// </summary>
-        private static readonly Type MODULE_INTERFACE_TYPE = typeof(IMicroModule);
 
         private GameObject _gameObject;
 
@@ -42,6 +47,15 @@ namespace MFramework.Core
         /// 模块的游戏物体
         /// </summary>
         internal GameObject gameObject => _gameObject;
+
+        /// <summary>
+        /// 模块链表中的上一个模块
+        /// </summary>
+        internal ModuleDescribe parent;
+        /// <summary>
+        /// 模块链表中的下一个模块
+        /// </summary>
+        internal ModuleDescribe child;
         /// <summary>
         /// 依赖的类型
         /// </summary>
@@ -156,7 +170,7 @@ namespace MFramework.Core
                 {
                     foreach (var requireType in attribute.RequireTypes)
                     {
-                        if (MODULE_INTERFACE_TYPE.IsAssignableFrom(requireType))
+                        if (MicroContext.MODULE_INTERFACE_TYPE.IsAssignableFrom(requireType))
                         {
                             tempList.Add(requireType);
                         }
