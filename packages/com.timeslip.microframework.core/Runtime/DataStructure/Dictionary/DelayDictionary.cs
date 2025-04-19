@@ -77,7 +77,7 @@ namespace MFramework.Core
         public void Remove(TKey key)
         {
             if (!_isDirty)
-                PromiseYielder.ExecuteForNextEndOfFrame(Push);
+                Push();
             _isDirty = true;
             if (_waitAddDic.ContainsKey(key))
                 _waitAddDic.Remove(key);
@@ -93,7 +93,7 @@ namespace MFramework.Core
         public void Add(TKey key, TValue value)
         {
             if (!_isDirty)
-                PromiseYielder.ExecuteForNextEndOfFrame(Push);
+                Push();
             _isDirty = true;
             if (_waitRemoveSet.Contains(key))
                 _waitRemoveSet.Remove(key);
@@ -109,7 +109,7 @@ namespace MFramework.Core
         public void Clear()
         {
             if (!_isDirty)
-                PromiseYielder.ExecuteForNextEndOfFrame(Push);
+                Push();
             _isDirty = true;
             _isClear = true;
             _waitAddDic.Clear();

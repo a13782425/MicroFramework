@@ -1,0 +1,16 @@
+{
+    "name": "MFramework.Promise.Runtime",
+    "rootNamespace": "MFramework.Runtime",
+    "references": [
+        "GUID:afc4e8d280ae4c94eb0253f659341780"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.LowLevel;
 using UnityEngine.PlayerLoop;
@@ -71,6 +72,10 @@ namespace MFramework.Core
         /// </summary>
         public static IMicroLogger logger { get; private set; }
         /// <summary>
+        /// 
+        /// </summary>
+        public static SynchronizationContext mainSynchronizationContext { get => _mainSynchronizationContext; set => _mainSynchronizationContext = value; }
+        /// <summary>
         /// 微框架是否已经启动
         /// </summary>
         public static bool IsLaunch => _isLaunch;
@@ -81,6 +86,14 @@ namespace MFramework.Core
         #endregion
 
         #region field
+        /// <summary>
+        ///  用于线程同步；多线程的数据发送到unity的主线程中；
+        /// </summary>
+        private static SynchronizationContext _mainSynchronizationContext;
+        /// <summary>
+        /// Unity的线程Id
+        /// </summary>
+        public static readonly int mainThreadId;
         /// <summary>
         /// 上下文Mono
         /// </summary>
@@ -114,6 +127,12 @@ namespace MFramework.Core
         #endregion
 
         #region public
+
+        static MicroContext()
+        {
+            mainSynchronizationContext = SynchronizationContext.Current;
+            mainThreadId = Thread.CurrentThread.ManagedThreadId;
+        }
 
         /// <summary>
         /// 初始化框架
@@ -517,9 +536,17 @@ namespace MFramework.Core
         /// 把方法抛到Unity线程执行
         /// </summary>
         /// <param name="action"></param>
-        public static void RunOnUnityThread(Action action)
+        public static void RunOnUnityThread(Action action, object data = null)
         {
-            Promise.Run(() => action(), SynchronizationOption.Foreground).Forget();
+            //Promise.Run(() => action(), SynchronizationOption.Foreground).Forget();
+            if (mainThreadId == Thread.CurrentThread.ManagedThreadId)
+            {
+                action();
+            }
+            else
+            {
+                mainSynchronizationContext.Post(_ => action(), data);
+            }
         }
 
         /// <summary>
@@ -530,7 +557,14 @@ namespace MFramework.Core
         /// <param name="data"></param>
         public static void RunOnUnityThread<T>(Action<T> action, T data)
         {
-            Promise.Run(() => action(data), SynchronizationOption.Foreground).Forget();
+            if (mainThreadId == Thread.CurrentThread.ManagedThreadId)
+            {
+                action(data);
+            }
+            else
+            {
+                mainSynchronizationContext.Post(_ => action(data), null);
+            }
         }
         #endregion
 

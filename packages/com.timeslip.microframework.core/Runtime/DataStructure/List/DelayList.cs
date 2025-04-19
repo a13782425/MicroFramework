@@ -58,7 +58,7 @@ namespace MFramework.Core
         public void Remove(T item)
         {
             if (!_isDirty)
-                PromiseYielder.ExecuteForNextEndOfFrame(Push);
+                Push();
             _isDirty = true;
             if (_waitAddSet.Contains(item))
                 _waitAddSet.Remove(item);
@@ -72,7 +72,7 @@ namespace MFramework.Core
         public void Add(T item)
         {
             if (!_isDirty)
-                PromiseYielder.ExecuteForNextEndOfFrame(Push);
+                Push();
             _isDirty = true;
             if (_waitRemoveSet.Contains(item))
                 _waitRemoveSet.Remove(item);
@@ -85,7 +85,7 @@ namespace MFramework.Core
         public void Clear()
         {
             if (!_isDirty)
-                PromiseYielder.ExecuteForNextEndOfFrame(Push);
+                Push();
             _isDirty = true;
             _isClear = true;
             _waitAddSet.Clear();

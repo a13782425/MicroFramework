@@ -1,0 +1,19 @@
+{
+    "name": "MFramework.Promise.Editor",
+    "rootNamespace": "MFramework.Editor",
+    "references": [
+        "GUID:bb385a198e6e182428e76c1aac265e89",
+        "GUID:77cf4f77b7f36e64c85c333ee09e98de"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

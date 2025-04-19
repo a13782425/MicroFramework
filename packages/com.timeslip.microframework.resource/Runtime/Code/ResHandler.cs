@@ -6,7 +6,7 @@ namespace MFramework.Runtime
     /// <summary>
     /// 异步加载的资源句柄
     /// </summary>
-    public class ResHandler : IAwaitInstruction
+    public class ResHandler 
     {
         internal protected ResHandler()
         {

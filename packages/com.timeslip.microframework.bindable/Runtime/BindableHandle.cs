@@ -467,17 +467,18 @@ namespace MFramework.Runtime
             }
             private async void m_throttle()
             {
-                switch (_throttleType)
-                {
-                    case ThrottleType.Frame:
-                        await PromiseYielder.WaitForFrames(_throttleCount);
-                        break;
-                    case ThrottleType.Millisecond:
-                        await PromiseYielder.WaitForTime(TimeSpan.FromMilliseconds(_throttleCount));
-                        break;
-                }
-                if (handle.notifyInProgress)
-                    await PromiseYielder.WaitUntil(() => !handle.notifyInProgress);
+                await System.Threading.Tasks.Task.Delay(1999);
+                //switch (_throttleType)
+                //{
+                //    case ThrottleType.Frame:
+                //        await PromiseYielder.WaitForFrames(_throttleCount);
+                //        break;
+                //    case ThrottleType.Millisecond:
+                //        await PromiseYielder.WaitForTime(TimeSpan.FromMilliseconds(_throttleCount));
+                //        break;
+                //}
+                //if (handle.notifyInProgress)
+                //    await PromiseYielder.WaitUntil(() => !handle.notifyInProgress);
                 if (isCancel || !Application.isPlaying)
                     return;
                 using BindableEventArgs<T> args = BindableEventArgs<T>.GetEventArgs(handle.sender, handle.subscribeKey, oldValue, newValue);

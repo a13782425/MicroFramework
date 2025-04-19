@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.Profiling.HierarchyFrameDataView;
 using UnityObject = UnityEngine.Object;
 
 namespace MFramework.Runtime
@@ -15,7 +14,7 @@ namespace MFramework.Runtime
     {
         protected UIView() : base()
         {
-            _cancelationSource = CancelationSource.New();
+            //_cancelationSource = CancelationSource.New();
         }
 
         /// <summary>
@@ -44,7 +43,7 @@ namespace MFramework.Runtime
 
         private readonly Dictionary<int, UIComponent> _coms = new Dictionary<int, UIComponent>();
         private readonly Dictionary<int, UIView> _widgets = new Dictionary<int, UIView>();
-        private CancelationSource _cancelationSource;
+        
     }
     //子类资源加载
     partial class UIView
@@ -62,29 +61,29 @@ namespace MFramework.Runtime
         /// <param name="args"></param>
         protected internal void Load<T>(string resPath, ResLoadDelegate<T> callback, params object[] args) where T : UnityObject
         {
-            if (_resHandler.TryGetValue(resPath, out ResHandler handler))
-            {
-                if (handler.isDone)
-                {
-                    callback.Invoke(handler.asset as T, args);
-                }
-                else
-                {
-                    m_waitLoad(handler, callback, args).WaitAsync(_cancelationSource.Token);
-                }
-            }
-            else
-            {
-                handler = UIModuleUtils.resourceModule.Load<T>(resPath, callback, args);
-                _resHandler.Add(resPath, handler);
-            }
-            async Promise m_waitLoad(ResHandler handler, ResLoadDelegate<T> callback, object[] args)
-            {
-                await handler;
-                if (handler.isCancel)
-                    return;
-                callback.Invoke(handler.asset as T, args);
-            }
+            //if (_resHandler.TryGetValue(resPath, out ResHandler handler))
+            //{
+            //    if (handler.isDone)
+            //    {
+            //        callback.Invoke(handler.asset as T, args);
+            //    }
+            //    else
+            //    {
+            //        m_waitLoad(handler, callback, args).WaitAsync(_cancelationSource.Token);
+            //    }
+            //}
+            //else
+            //{
+            //    handler = UIModuleUtils.resourceModule.Load<T>(resPath, callback, args);
+            //    _resHandler.Add(resPath, handler);
+            //}
+            //async m_waitLoad(ResHandler handler, ResLoadDelegate<T> callback, object[] args)
+            //{
+            //    await handler;
+            //    if (handler.isCancel)
+            //        return;
+            //    callback.Invoke(handler.asset as T, args);
+            //}
         }
         /// <summary>
         /// 加载一个资源
@@ -348,17 +347,6 @@ namespace MFramework.Runtime
         /// </summary>
         /// <returns></returns>
         protected virtual IViewModel GetViewModel() => null;
-
-        /// <summary>
-        /// 【异步】打开动画，不会阻挡正常生命周期
-        /// </summary>
-        /// <returns></returns>
-        protected virtual async Promise OnOpenAnim() { await 0; }
-        /// <summary>
-        /// 【异步】关闭动画，不会阻挡正常生命周期
-        /// </summary>
-        /// <returns></returns>
-        protected virtual async Promise OnCloseAnim() { await 0; }
 
         /// <summary>
         /// 界面创建完成,一个界面只会执行一次
