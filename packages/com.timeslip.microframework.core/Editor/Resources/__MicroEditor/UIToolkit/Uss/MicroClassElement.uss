@@ -1,0 +1,14 @@
+VisualElement {
+	-unity-font: resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+    -unity-font-definition : resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+	font-size: 14px;
+}
+
+MicroClassElement > .unity-base-field__input{
+	min-width: 0px;
+	flex-grow: 0;
+}
+
+MicroClassElement > MicroDropdownField{
+	flex-grow: 1;
+}

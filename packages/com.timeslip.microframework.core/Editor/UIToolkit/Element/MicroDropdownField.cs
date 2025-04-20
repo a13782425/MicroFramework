@@ -44,6 +44,8 @@ namespace MFramework.Core.Editor
             public Action<VisualElement> bindCustomItem;
 
             public ItemType itemType;
+
+            public static implicit operator ValueItem(Item item) => new ValueItem() { value = item.value, displayName = item.displayName, categoryName = item.categoryName };
         }
 
         private List<Item> m_Items;
@@ -152,7 +154,6 @@ namespace MFramework.Core.Editor
 
             public WindowContent(MicroDropdownField dropdownField)
             {
-                m_DropdownField = dropdownField;
             }
             class SelectionContext
             {
@@ -200,7 +201,6 @@ namespace MFramework.Core.Editor
             });
 
             readonly List<MicroDropdownContent.Item> m_Items = new List<MicroDropdownContent.Item>();
-            private readonly MicroDropdownField m_DropdownField;
             Vector2 m_Size;
             Vector2 m_Scale;
             string m_CurrentActiveValue;
@@ -209,6 +209,7 @@ namespace MFramework.Core.Editor
             KeyboardNavigationManipulator m_NavigationManipulator;
 
             public event Action<string> onSelectionChanged;
+            public event Action<MicroDropdownContent.ValueItem> onSelectionItemChanged;
 
             public void Show(Rect rect, Vector2 scale, string currentValue, IEnumerable<MicroDropdownContent.Item> items)
             {
@@ -221,7 +222,7 @@ namespace MFramework.Core.Editor
                 foreach (var item in m_Items)
                 {
                     switch (item.itemType)
-                    {                       
+                    {
                         case MicroDropdownContent.ItemType.Separator:
                             height += 4;
                             break;
@@ -270,6 +271,7 @@ namespace MFramework.Core.Editor
                             }
 
                             onSelectionChanged?.Invoke(m_Items[m_SelectedIndex].displayName);
+                            onSelectionItemChanged?.Invoke(m_Items[m_SelectedIndex]);
                             editorWindow.Close();
                             break;
                     }
@@ -513,6 +515,7 @@ namespace MFramework.Core.Editor
                 // the previous time the element was used.
                 ctx.content.SetSelection(ctx.index);
                 ctx.content.onSelectionChanged?.Invoke(ctx.item.displayName);
+                ctx.content.onSelectionItemChanged?.Invoke(ctx.item);
                 ctx.content.editorWindow.Close();
             }
 
@@ -594,6 +597,7 @@ namespace MFramework.Core.Editor
                             return false;
 
                         onSelectionChanged?.Invoke(m_Items[m_SelectedIndex].displayName);
+                        onSelectionItemChanged?.Invoke(m_Items[m_SelectedIndex]);
                         editorWindow.Close();
                         break;
                     case KeyboardNavigationOperation.Previous:
@@ -686,7 +690,9 @@ namespace MFramework.Core.Editor
         private readonly TextElement m_Input;
         private VisualElement m_VisualInput;
 
-        public Func<MicroDropdownContent> getContent;
+        public event Func<MicroDropdownContent> getContent;
+
+        public event Action<MicroDropdownContent.ValueItem> onSelectionItemChanged;
 
         public MicroDropdownField()
             : this(null)
@@ -752,10 +758,9 @@ namespace MFramework.Core.Editor
         public void ShowMenu()
         {
             WindowContent windowContent = new WindowContent(this);
-            windowContent.onSelectionChanged += delegate (string selected)
-            {
-                value = selected;
-            };
+            windowContent.onSelectionChanged += a => value = a;
+            windowContent.onSelectionItemChanged += a => onSelectionItemChanged?.Invoke(a);
+
             MicroDropdownContent popupContent = getContent?.Invoke() ?? default(MicroDropdownContent);
             Vector2 scale = m_VisualInput.worldTransform.lossyScale;
             windowContent.Show(m_VisualInput.worldBound, scale, value, popupContent.Items);

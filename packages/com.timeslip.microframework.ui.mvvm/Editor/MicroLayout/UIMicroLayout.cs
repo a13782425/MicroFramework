@@ -35,17 +35,17 @@ namespace MFramework.Editor
                         element.ToString()
                         );
                 };
-            //IMGUIContainer container = new IMGUIContainer(m_onGui);
-            //container.style.marginTop = 4;
-            //container.style.marginBottom = 4;
-            //container.style.marginLeft = 4;
-            //container.style.marginRight = 4;
-            //container.style.flexGrow = 1;
-            //panel.Add(container);
+            IMGUIContainer container = new IMGUIContainer(m_onGui);
+            container.style.marginTop = 4;
+            container.style.marginBottom = 4;
+            container.style.marginLeft = 4;
+            container.style.marginRight = 4;
+            container.style.flexGrow = 1;
+            panel.Add(container);
             Button button = new Button(m_onClick);
             button.text = "生成界面";
             button.AddToClassList(MicroStyles.H2);
-            panel.Add(_runtimeConfig.DrawUI());
+            //panel.Add(_runtimeConfig.DrawUI());
             panel.Add(button);
             return base.Init();
         }

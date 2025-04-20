@@ -92,10 +92,10 @@ namespace MFramework.Core.Editor
             }
         }
 
-        /// <summary>
-        /// 自定义绘制器字典
-        /// </summary>
-        internal readonly static Dictionary<Type, ICustomDrawer> CustomDrawers = new Dictionary<Type, ICustomDrawer>();
+        ///// <summary>
+        ///// 自定义绘制器字典
+        ///// </summary>
+        //internal readonly static Dictionary<Type, ICustomDrawer> CustomDrawers = new Dictionary<Type, ICustomDrawer>();
 
         static MicroContextEditor()
         {
@@ -186,70 +186,70 @@ namespace MFramework.Core.Editor
         {
             return Resources.Load<T>(Path.Combine(EDITOR_RESOURCE_PATH, path));
         }
-        /// <summary>
-        /// 获取自定义绘制器
-        /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
-        internal static ICustomDrawer GetCustomDrawer(Type type)
-        {
-            ICustomDrawer drawer = null;
-            foreach (var item in CustomDrawers)
-            {
-                if (IsMatchType(item.Key, type))
-                {
-                    drawer = item.Value;
-                    break;
-                }
-            }
-            return drawer;
-            static bool IsMatchType(Type drawerType, Type targetType)
-            {
-                // 1. 精确匹配类型
-                if (drawerType == targetType) return true;
+        ///// <summary>
+        ///// 获取自定义绘制器
+        ///// </summary>
+        ///// <param name="type"></param>
+        ///// <returns></returns>
+        //internal static ICustomDrawer GetCustomDrawer(Type type)
+        //{
+        //    ICustomDrawer drawer = null;
+        //    foreach (var item in CustomDrawers)
+        //    {
+        //        if (IsMatchType(item.Key, type))
+        //        {
+        //            drawer = item.Value;
+        //            break;
+        //        }
+        //    }
+        //    return drawer;
+        //    static bool IsMatchType(Type drawerType, Type targetType)
+        //    {
+        //        // 1. 精确匹配类型
+        //        if (drawerType == targetType) return true;
 
-                // 2. 匹配基类
-                if (drawerType.IsAssignableFrom(targetType)) return true;
+        //        // 2. 匹配基类
+        //        if (drawerType.IsAssignableFrom(targetType)) return true;
 
-                // 3. 匹配泛型定义
-                if (drawerType.IsGenericTypeDefinition &&
-                    targetType.IsGenericType &&
-                    drawerType == targetType.GetGenericTypeDefinition())
-                {
-                    return true;
-                }
+        //        // 3. 匹配泛型定义
+        //        if (drawerType.IsGenericTypeDefinition &&
+        //            targetType.IsGenericType &&
+        //            drawerType == targetType.GetGenericTypeDefinition())
+        //        {
+        //            return true;
+        //        }
 
-                // 4. 匹配数组
-                if (drawerType.IsArray && targetType.IsArray)
-                {
-                    return IsMatchType(
-                        drawerType.GetElementType(),
-                        targetType.GetElementType());
-                }
+        //        // 4. 匹配数组
+        //        if (drawerType.IsArray && targetType.IsArray)
+        //        {
+        //            return IsMatchType(
+        //                drawerType.GetElementType(),
+        //                targetType.GetElementType());
+        //        }
 
-                return false;
-            }
-        }
+        //        return false;
+        //    }
+        //}
 
-        /// <summary>
-        /// 获取字段自定义绘制器
-        /// </summary>
-        /// <param name="fieldInfo"></param>
-        /// <returns></returns>
-        internal static IEnumerable<ICustomDrawer> GetCustomDrawers(FieldInfo fieldInfo)
-        {
-            List<ICustomDrawer> drawers = new List<ICustomDrawer>();
-            var drawer = GetCustomDrawer(fieldInfo.FieldType);
-            if (drawer != null)
-                drawers.Add(drawer);
-            foreach (var item in fieldInfo.GetCustomAttributesData())
-            {
-                drawer = GetCustomDrawer(item.AttributeType);
-                if (drawer != null)
-                    drawers.Add(drawer);
-            }
-            return drawers;
-        }
+        ///// <summary>
+        ///// 获取字段自定义绘制器
+        ///// </summary>
+        ///// <param name="fieldInfo"></param>
+        ///// <returns></returns>
+        //internal static IEnumerable<ICustomDrawer> GetCustomDrawers(FieldInfo fieldInfo)
+        //{
+        //    List<ICustomDrawer> drawers = new List<ICustomDrawer>();
+        //    var drawer = GetCustomDrawer(fieldInfo.FieldType);
+        //    if (drawer != null)
+        //        drawers.Add(drawer);
+        //    foreach (var item in fieldInfo.GetCustomAttributesData())
+        //    {
+        //        drawer = GetCustomDrawer(item.AttributeType);
+        //        if (drawer != null)
+        //            drawers.Add(drawer);
+        //    }
+        //    return drawers;
+        //}
 
 
         /// <summary>
@@ -508,29 +508,28 @@ namespace MFramework.Core.Editor
         /// </summary>
         private static void m_initCustomDrawers()
         {
-            CustomDrawers.Clear();
-            TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<ICustomDrawer>();
-            foreach (var type in types)
-            {
-                if (type.GetCustomAttribute<IgnoreAttribute>() != null)
-                    continue;
-                if (type.IsAbstract || type.IsValueType || type.IsGenericType)
-                    continue;
-                CustomDrawerAttribute customDrawerAttribute = type.GetCustomAttribute<CustomDrawerAttribute>();
-                if (customDrawerAttribute == null)
-                    continue;
-                if (customDrawerAttribute.TargetType == null)
-                    continue;
-                Type targetType = customDrawerAttribute.TargetType;
-                ICustomDrawer drawer = (ICustomDrawer)Activator.CreateInstance(type);
-                if (CustomDrawers.ContainsKey(targetType))
-                {
-                    if (drawer.Priority <= CustomDrawers[targetType].Priority)
-                        continue;
-                }
-                CustomDrawers.Add(targetType, drawer);
-            }
-
+            //CustomDrawers.Clear();
+            //TypeCache.TypeCollection types = TypeCache.GetTypesDerivedFrom<ICustomDrawer>();
+            //foreach (var type in types)
+            //{
+            //    if (type.GetCustomAttribute<IgnoreAttribute>() != null)
+            //        continue;
+            //    if (type.IsAbstract || type.IsValueType || type.IsGenericType)
+            //        continue;
+            //    CustomDrawerAttribute customDrawerAttribute = type.GetCustomAttribute<CustomDrawerAttribute>();
+            //    if (customDrawerAttribute == null)
+            //        continue;
+            //    if (customDrawerAttribute.TargetType == null)
+            //        continue;
+            //    Type targetType = customDrawerAttribute.TargetType;
+            //    ICustomDrawer drawer = (ICustomDrawer)Activator.CreateInstance(type);
+            //    if (CustomDrawers.ContainsKey(targetType))
+            //    {
+            //        if (drawer.Priority <= CustomDrawers[targetType].Priority)
+            //            continue;
+            //    }
+            //    CustomDrawers.Add(targetType, drawer);
+            //}
         }
         /// <summary>
         /// 初始化编辑器变化和Update的方法

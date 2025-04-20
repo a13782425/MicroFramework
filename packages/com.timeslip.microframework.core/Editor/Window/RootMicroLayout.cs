@@ -1,16 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using UnityEditor;
-using UnityEditorInternal;
-using UnityEngine;
 using UnityEngine.UIElements;
-using static MFramework.Core.MicroRuntimeConfig;
-using static UnityEditor.GenericMenu;
 
 namespace MFramework.Core.Editor
 {
@@ -21,175 +12,70 @@ namespace MFramework.Core.Editor
         public override int Priority => int.MinValue;
 
         private MicroRuntimeConfig _config;
-        private ReorderableList _reorderableList;
-        //TODO: 下拉列表
-        private List<MicroClassSerializer> _allModuleClassList = new List<MicroClassSerializer>();
+        private ListView _moduleListView;
         public override bool Init()
         {
             _config = MicroRuntimeConfig.CurrentConfig;
-            _reorderableList = new ReorderableList(_config.InitModules, typeof(MicroClassSerializer), true, true, true, true);
-            _reorderableList.drawHeaderCallback = (Rect rect) =>
-            {
-                EditorGUI.LabelField(rect, "自定义加载的模块:");
-            };
-            _reorderableList.drawElementCallback =
-                (Rect rect, int index, bool isActive, bool isFocused) =>
-                {
-                    var element = _config.InitModules[index];
-                    rect.y += 2;
-                    if (EditorGUI.DropdownButton(new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight),
-                         new GUIContent(element.ToString()), FocusType.Passive
-                         ))
-                    {
-                        // 计算弹出菜单的位置和大小
-                        Rect popupPosition = new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight);
-                        m_buildPopupList(m_popupSelect).DropDown(popupPosition);
-                    }
-                };
-            _reorderableList.onAddDropdownCallback = m_addDropdownCallback;
-            _reorderableList.onAddCallback = m_addCallback;
-            _reorderableList.onCanAddCallback = m_canAddCallback;
-            _reorderableList.onRemoveCallback = m_removeCallback;
+            _moduleListView = new ListView(_config.InitModules);
+            _moduleListView.makeItem += m_makeItem;
+            _moduleListView.bindItem += m_bindItem;
+            _moduleListView.itemsAdded += m_itemsAdded;
+            _moduleListView.itemsRemoved += m_itemsRemoved;
+            _moduleListView.fixedItemHeight = 32;
+            _moduleListView.reorderMode = ListViewReorderMode.Animated;
+            _moduleListView.reorderable = true;
+            _moduleListView.showAddRemoveFooter = true;
+            _moduleListView.showFoldoutHeader = true;
+            _moduleListView.headerTitle = "自定义加载模块:";
             Label label = new Label();
             label.text = "微框架配置";
             label.AddToClassList(MicroStyles.H1);
-            IMGUIContainer container = new IMGUIContainer(m_onGui);
-            container.style.marginTop = 4;
-            container.style.marginBottom = 4;
-            container.style.marginLeft = 4;
-            container.style.marginRight = 4;
             panel.Add(label);
-            panel.Add(container);
-            Button generateButton = new Button();
-            generateButton.text = "生成类映射文件";
-            generateButton.clicked += m_generateButtonClick;
-            panel.Add(generateButton);
+            panel.Add(_moduleListView);
             return true;
         }
 
-        [MenuItem("MFramework/生成器/生成类映射文件")]
-        private static void m_generateButtonClick()
+        private void m_itemsRemoved(IEnumerable<int> enumerable)
         {
-            string filePath = EditorUtility.SaveFilePanelInProject("生成类映射文件", "MicroTypeMapper", "cs", "");
-            if (string.IsNullOrWhiteSpace(filePath))
-            {
-                EditorUtility.DisplayDialog("错误", "生成路径为空", "关闭");
-                return;
-            }
-            const string ONE_TAB = "    ";
-            StringBuilder sb = new StringBuilder();
-
-            sb.AppendLine("//------------------------------------------------------------------------------------------------------------");
-            sb.AppendLine("//-------------------------------------------- generate file -------------------------------------------------");
-            sb.AppendLine("//------------------------------------------------------------------------------------------------------------");
-            sb.AppendLine($"public class {Path.GetFileNameWithoutExtension(filePath)} : MFramework.Core.IMicroTypeMapper");
-            sb.AppendLine($"{{");
-            sb.AppendLine($"{ONE_TAB}public System.Type GetType(string typeFullName)");
-            sb.AppendLine($"{ONE_TAB}{{");
-            sb.AppendLine($"{ONE_TAB}{ONE_TAB}return null;");
-            sb.AppendLine($"{ONE_TAB}}}");
-
-            sb.AppendLine($"{ONE_TAB}public System.Type GetType(MFramework.Core.MicroClassSerializer classSerializer)");
-            sb.AppendLine($"{ONE_TAB}{{");
-            sb.AppendLine($"{ONE_TAB}{ONE_TAB}return GetType(classSerializer.TypeName);");
-            sb.AppendLine($"{ONE_TAB}}}");
-
-            sb.AppendLine($"}}");
-
-            File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
-            AssetDatabase.Refresh();
         }
 
-        private void m_addDropdownCallback(Rect buttonRect, ReorderableList list)
+        private void m_itemsAdded(IEnumerable<int> enumerable)
         {
-            m_buildPopupList(m_addPopupSelect).DropDown(buttonRect);
-        }
-
-        private GenericMenu m_buildPopupList(MenuFunction2 popupSelect)
-        {
-            GenericMenu genericMenu = new GenericMenu();
-            foreach (var item in _allModuleClassList)
+            foreach (var item in enumerable)
             {
-                genericMenu.AddItem(new GUIContent(item.TypeName), false, popupSelect, item);
-            }
-            return genericMenu;
-        }
-        private void m_addPopupSelect(object userData)
-        {
-            if (userData is MicroClassSerializer moduleClass)
-            {
-                _config.InitModules.Add(moduleClass);
-                _allModuleClassList.Remove(moduleClass);
-            }
-        }
-        private void m_popupSelect(object userData)
-        {
-            if (userData is MicroClassSerializer moduleClass)
-            {
-                if (_reorderableList.index >= 0 && _reorderableList.index < _config.InitModules.Count)
-                {
-                    MicroClassSerializer temp = _config.InitModules[_reorderableList.index];
-                    _config.InitModules[_reorderableList.index] = moduleClass;
-                    _allModuleClassList.Remove(moduleClass);
-                    _allModuleClassList.Add(temp);
-                }
+                this._config.InitModules[item] = new MicroClassSerializer();
             }
         }
 
-        private bool m_canAddCallback(ReorderableList list)
+        private void m_bindItem(VisualElement element, int arg2)
         {
-            return _allModuleClassList.Count > 0;
+            var microClassElement = element as MicroClassElement;
+            microClassElement.value = this._config.InitModules[arg2];
         }
 
-        private void m_removeCallback(ReorderableList list)
+        private VisualElement m_makeItem()
         {
-            if (list.index >= 0 && list.index < _config.InitModules.Count)
-            {
-                MicroClassSerializer moduleClass = _config.InitModules[list.index];
-                _config.InitModules.RemoveAt(list.index);
-                _allModuleClassList.Add(moduleClass);
-            }
+            var classElement = new MicroClassElement(null, null, typeof(IMicroModule));
+            classElement.onCustomFilterType += ClassElement_onCustomFilterType;
+            classElement.style.height = 26;
+            return classElement;
         }
 
-        private void m_addCallback(ReorderableList list)
+        private bool ClassElement_onCustomFilterType(Type arg)
         {
-            MicroClassSerializer moduleClass = _allModuleClassList[0];
-            _allModuleClassList.RemoveAt(0);
-            _config.InitModules.Add(moduleClass);
+            return arg.GetCustomAttribute<IgnoreAttribute>() == null;
         }
-        private void m_resetList()
-        {
-            _allModuleClassList.Clear();
-            var modules = TypeCache.GetTypesDerivedFrom<IMicroModule>();
-            foreach (var module in modules)
-            {
-                if (module.GetCustomAttribute<IgnoreAttribute>() != null)
-                    continue;
-                if (module.IsAbstract || module.IsInterface || !module.IsClass)
-                    continue;
-                if (_config.InitModules.FirstOrDefault(a => a.AssemblyName == module.Assembly.FullName && a.TypeName == module.FullName) != null)
-                {
-                    //已经有了
-                    continue;
-                }
-                //还没有
-                _allModuleClassList.Add(new MicroClassSerializer() { AssemblyName = module.Assembly.FullName, TypeName = module.FullName });
-            }
-        }
+
         public override void ShowUI()
         {
-            m_resetList();
         }
-
-
-
-        private void m_onGui()
-        {
-            _config.AutoRegisterModule = EditorGUILayout.ToggleLeft("是否自动加载全部模块", _config.AutoRegisterModule);
-            if (!_config.AutoRegisterModule)
-            {
-                _reorderableList.DoLayoutList();
-            }
-        }
+        //private void m_onGui()
+        //{
+        //    _config.AutoRegisterModule = EditorGUILayout.ToggleLeft("是否自动加载全部模块", _config.AutoRegisterModule);
+        //    if (!_config.AutoRegisterModule)
+        //    {
+        //        _reorderableList.DoLayoutList();
+        //    }
+        //}
     }
 }

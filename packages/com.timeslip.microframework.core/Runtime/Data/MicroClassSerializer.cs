@@ -18,11 +18,6 @@ namespace MFramework.Core
         /// </summary>
         public string TypeName;
 
-        /// <summary>
-        /// 显示名称
-        /// </summary>
-        [NonSerialized]
-        internal string DisplayName;
         [NonSerialized]
         private Type _type;
 
@@ -37,9 +32,6 @@ namespace MFramework.Core
                     return _type;
                 if (string.IsNullOrEmpty(AssemblyName) || string.IsNullOrEmpty(TypeName))
                     return null;
-                _type = MicroContext.microTypeMapper?.GetType(this);
-                if (_type != null)
-                    return _type;
                 Assembly assembly = Assembly.Load(AssemblyName);
                 if (assembly == null)
                     return null;

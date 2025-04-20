@@ -79,10 +79,6 @@ namespace MFramework.Core
         /// 微框架是否已经启动
         /// </summary>
         public static bool IsLaunch => _isLaunch;
-        /// <summary>
-        /// 微框架类型映射器
-        /// </summary>
-        internal static IMicroTypeMapper microTypeMapper => _microTypeMapper;
         #endregion
 
         #region field
@@ -119,10 +115,6 @@ namespace MFramework.Core
         /// 是否已经启动
         /// </summary>
         private static bool _isLaunch = false;
-        /// <summary>
-        /// 微框架类型映射器
-        /// </summary>
-        private static IMicroTypeMapper _microTypeMapper;
 
         #endregion
 

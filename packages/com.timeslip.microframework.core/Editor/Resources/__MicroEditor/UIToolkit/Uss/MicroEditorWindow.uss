@@ -1,6 +1,6 @@
 VisualElement {
-	-unity-font: resource("__MicroEditor/MarkdownSkin/Alibaba-PuHuiTi-Medium");
-    -unity-font-definition : resource("__MicroEditor/MarkdownSkin/Alibaba-PuHuiTi-Medium");
+	-unity-font: resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+    -unity-font-definition : resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
 	font-size: 14px;
 }
 .window-splitter-leftpane{
@@ -49,6 +49,10 @@ VisualElement {
 	border-left-width: 2px;
 	border-left-color: rgba(0,0,0,1);
 	flex-grow: 1;
+}
+
+.unity-list-view__reorderable-item > .unity-list-view__reorderable-handle, .unity-list-view__reorderable-item__container { 
+	align-self: center;
 }
 
 .micro-h1{

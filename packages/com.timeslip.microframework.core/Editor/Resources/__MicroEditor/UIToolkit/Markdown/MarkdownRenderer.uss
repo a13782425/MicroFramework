@@ -1,6 +1,6 @@
 VisualElement {
-    -unity-font: resource("__MicroEditor/MarkdownSkin/Alibaba-PuHuiTi-Medium");
-    -unity-font-definition : resource("__MicroEditor/MarkdownSkin/Alibaba-PuHuiTi-Medium");
+    -unity-font: resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+    -unity-font-definition : resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
     font-size: 14px;
 }
 
@@ -42,8 +42,8 @@ VisualElement {
 }
 
 .codeblock Label {
-    -unity-font: resource("__MicroEditor/MarkdownSkin/JetBrainsMono-Regular");
-    -unity-font-definition : resource("__MicroEditor/MarkdownSkin/JetBrainsMono-Regular SDF");
+    -unity-font: resource("__MicroEditor/UIToolkit/Markdown/JetBrainsMono-Regular");
+    -unity-font-definition : resource("__MicroEditor/UIToolkit/Markdown/JetBrainsMono-Regular SDF");
 }
 
 .list {

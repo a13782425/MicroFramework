@@ -32,7 +32,7 @@ namespace MFramework.Core.Editor
         private void CreateGUI()
         {
             VisualElement root = this.rootVisualElement;
-            root.Add(new MicroObjectField(new TestRuntimeConfig()));
+            //root.Add(new MicroObjectField(new TestRuntimeConfig()));
         }
     }
 }
