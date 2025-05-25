@@ -11,6 +11,7 @@
   "changelogUrl": "http://blog.timeslip.cn/archives/microframework.core-geng-xin-ri-zhi",
   "description": "\u5fae\u6846\u67b6\u6838\u5fc3\u5e93",
   "publishConfig": {
+    "access": "public",
     "registry": "https://npm.pkg.github.com/@a13782425"
   }
 }
