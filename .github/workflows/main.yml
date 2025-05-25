@@ -19,7 +19,7 @@ jobs:
       matrix:
         package: 
           - name: com.timeslip.microframework.core
-            path: 'packages/com.timeslip.microframework.core/**'
+            path: 'packages/com.timeslip.microframework.core/'
     steps:
     - uses: actions/checkout@v3
 
