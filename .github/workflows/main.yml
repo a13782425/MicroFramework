@@ -10,66 +10,85 @@ on:
   workflow_dispatch:
     inputs:
       package_name:
-        description: 'Publish Core'
+        description: '要发布的包名'
         required: true
         default: 'com.timeslip.microframework.core'
 concurrency:
   group: "publish-packages" # 如果有新的工作流实例触发，取消正在进行中的同组实例
   cancel-in-progress: true
 jobs:
+  detect-changed-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_packages: ${{ steps.set-outputs.outputs.changed_packages }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-outputs
+        run: |
+          # 只需在这里维护包的 name:路径 列表，方便扩展
+          BUNDLES=(
+            "com.timeslip.microframework.core:packages/com.timeslip.microframework.core/"
+            "com.timeslip.microframework.bindable:packages/com.timeslip.microframework.bindable/"
+          )
+
+          CHANGED=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            for pair in "${BUNDLES[@]}"; do
+              NAME="${pair%%:*}"
+              PATH="${pair##*:}"
+              if [ "${{ github.event.inputs.package_name }}" = "$NAME" ]; then
+                CHANGED+=("{\"name\":\"$NAME\",\"path\":\"$PATH\"}")
+              fi
+            done
+          else
+            DIFF_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.event.before }} ${{ github.sha }})
+            for pair in "${BUNDLES[@]}"; do
+              NAME="${pair%%:*}"
+              PATH="${pair##*:}"
+              PACKAGE_JSON="${PATH}package.json"
+              for file in $DIFF_FILES; do
+                if [ "$file" = "$PACKAGE_JSON" ]; then
+                  CHANGED+=("{\"name\":\"$NAME\",\"path\":\"$PATH\"}")
+                fi
+              done
+            done
+          fi
+
+          # 组装 JSON 数组作为输出
+          if [ ${#CHANGED[@]} -gt 0 ]; then
+            echo "changed_packages=[$(IFS=,; echo "${CHANGED[*]}")]" >> $GITHUB_OUTPUT
+          else
+            echo "changed_packages=[]" >> $GITHUB_OUTPUT
+          fi
+
   build-and-publish:
+    needs: detect-changed-packages
+    if: needs.detect-changed-packages.outputs.changed_packages != '[]'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: 
-          - name: com.timeslip.microframework.core
-            path: 'packages/com.timeslip.microframework.core/'
-          - name: com.timeslip.microframework.bindable
-            path: 'packages/com.timeslip.microframework.bindable/'
+        package: ${{ fromJson(needs.detect-changed-packages.outputs.changed_packages) }}
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Debugging Event Information
-      run: |
-        echo "Event Name: ${{ github.event_name }}"
-        if [ "$GITHUB_EVENT_NAME" == "push" ]; then
-          echo "Push event detected"
-          for file in $(git diff-tree --no-commit-id --name-only -r HEAD~1 HEAD); do
-            echo "Changed file: $file"
-          done
-        elif [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
-          echo "Workflow dispatch event detected"
-          echo "Specified package: ${{ github.event.inputs.package_name }}"
-        fi
-        
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '14.x'
-        registry-url: 'https://npm.pkg.github.com/'
+      - uses: actions/checkout@v3
 
-    - run: npm install --only=prod
-    
-    - name: Debugging Matrix Values
-      run: |
-        echo "Package Name: ${{ matrix.package.name }}"
-        echo "Package Path: ${{ matrix.package.path }}"
-     
-    - name: Create .npmrc file
-      if: steps.compare_versions.outputs.should_publish == 'true'
-      run: |
-        echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > ~/.npmrc
-        echo "@a13782425:registry=https://npm.pkg.github.com/" >> ~/.npmrc
-        cat ~/.npmrc
-      env:
-        GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
-        
-    - name: Build and publish ${{ matrix.package.name }}
-      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
-      run: |
-        echo "Checking if changes match ${{ matrix.package.path }}"
-        cd ${{ matrix.package.path }}
-        npm config set registry https://npm.pkg.github.com/
-        npm publish
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14.x'
+          registry-url: 'https://npm.pkg.github.com/'
+
+      - run: npm install --only=prod
+
+      - name: Create .npmrc file
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > ~/.npmrc
+          echo "@a13782425:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+
+      - name: Build and publish ${{ matrix.package.name }}
+        run: |
+          cd ${{ matrix.package.path }}
+          npm config set registry https://npm.pkg.github.com/
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+
