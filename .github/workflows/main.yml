@@ -30,11 +30,15 @@ jobs:
         registry-url: 'https://npm.pkg.github.com/'
 
     - run: npm install --only=prod
-
+    - name: Debugging Matrix Values
+      run: |
+        echo "Package Name: ${{ matrix.package.name }}"
+        echo "Package Path: ${{ matrix.package.path }}"
     - name: Build and publish ${{ matrix.package.name }}
       if: contains(github.event.commits[0].added, matrix.package.path) || contains(github.event.commits[0].modified, matrix.package.path)
       run: |
-        cd ${{ matrix.package.name }}
+        echo "Checking if changes match ${matrix.package.path}"
+        cd ${{ matrix.package.path }}
         npm run build
         npm publish
       env:
