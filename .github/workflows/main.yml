@@ -51,12 +51,29 @@ jobs:
       run: |
         echo "Package Name: ${{ matrix.package.name }}"
         echo "Package Path: ${{ matrix.package.path }}"
+        
+    - name: Check if previous commit exists # 检查是否有前一个提交
+      id: check_previous_commit
+      run: |
+        if git rev-parse --verify HEAD~1 &> /dev/null; then
+          echo "::set-output name=has_previous_commit::true"
+        else
+          echo "::set-output name=has_previous_commit::false"
+        fi
+
     - name: Get previous version # 获取前一个提交的版本
       id: get_previous_version
+      if: steps.check_previous_commit.outputs.has_previous_commit == 'true'
       run: |
         PREVIOUS_VERSION=$(git show HEAD~1:packages/${{ matrix.package.name }}/package.json | jq -r '.version')
         echo "::set-output name=previous_version::$PREVIOUS_VERSION"
       shell: bash
+
+    - name: Set initial version # 设置初始版本为空字符串
+      id: set_initial_version
+      if: steps.check_previous_commit.outputs.has_previous_commit == 'false'
+      run: |
+        echo "::set-output name=previous_version::"
 
     - name: Get current version # 获取当前提交的版本
       id: get_current_version
