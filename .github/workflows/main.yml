@@ -5,13 +5,16 @@ on:
     branches:
       - main
     paths:
-      - 'packages/com.timeslip.microframework.core/**'
+      - 'packages/com.timeslip.microframework.core/package.json' # 只监控 package.json 文件的变化
   workflow_dispatch:
     inputs:
       package_name:
         description: 'Publish Core'
         required: true
         default: 'com.timeslip.microframework.core'
+concurrency:
+  group: "publish-packages" # 如果有新的工作流实例触发，取消正在进行中的同组实例
+  cancel-in-progress: true
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
@@ -48,8 +51,45 @@ jobs:
       run: |
         echo "Package Name: ${{ matrix.package.name }}"
         echo "Package Path: ${{ matrix.package.path }}"
+    - name: Get previous version # 获取前一个提交的版本
+      id: get_previous_version
+      run: |
+        PREVIOUS_VERSION=$(jq -r '.version' packages/${{ matrix.package.name }}/package.json)
+        echo "::set-output name=previous_version::$PREVIOUS_VERSION"
+      shell: bash
+      env:
+        PREVIOUS_COMMIT_SHA: ${{ github.sha }}
+
+    - name: Checkout previous commit # 切换到前一个提交
+      uses: actions/checkout@v3
+      with:
+        ref: HEAD^
+
+    - name: Get current version # 获取当前提交的版本
+      id: get_current_version
+      run: |
+        CURRENT_VERSION=$(jq -r '.version' packages/${{ matrix.package.name }}/package.json)
+        echo "::set-output name=current_version::$CURRENT_VERSION"
+      shell: bash
+
+    - name: Compare versions # 比较版本号
+      id: compare_versions
+      run: |
+        if [ "${{ steps.get_previous_version.outputs.previous_version }}" != "${{ steps.get_current_version.outputs.current_version }}" ]; then
+          echo "Version changed from ${steps.get_previous_version.outputs.previous_version} to ${steps.get_current_version.outputs.current_version}"
+          echo "::set-output name=should_publish::true"
+        else
+          echo "Version did not change"
+          echo "::set-output name=should_publish::false"
+        fi
+
+    - name: Restore latest commit # 切换回最新的提交
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.sha }}
         
     - name: Create .npmrc file
+      if: steps.compare_versions.outputs.should_publish == 'true'
       run: |
         echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > ~/.npmrc
         echo "@a13782425:registry=https://npm.pkg.github.com/" >> ~/.npmrc
@@ -58,7 +98,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
         
     - name: Build and publish ${{ matrix.package.name }}
-      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
+      if: steps.compare_versions.outputs.should_publish == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
       run: |
         echo "Checking if changes match ${{ matrix.package.path }}"
         cd ${{ matrix.package.path }}
