@@ -9,5 +9,8 @@
   "description": "\u7b80\u5316\u7248Promise\uff0c\u53ea\u4fdd\u7559\u4e86\u5f02\u6b65\u548c\u6807\u51c6\u7684\u3002",
   "dependencies": {
     "com.timeslip.microframework.core": "0.1.0-pre.1"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@a13782425"
   }
 }
