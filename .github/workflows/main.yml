@@ -23,25 +23,39 @@ jobs:
       changed_packages: ${{ steps.set-outputs.outputs.changed_packages }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
       - id: set-outputs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PACKAGE_NAME: ${{ github.event.inputs.package_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
         run: |
-          # 只需在这里维护包的 name:路径 列表，方便扩展
           BUNDLES=(
             "com.timeslip.microframework.core:packages/com.timeslip.microframework.core/"
             "com.timeslip.microframework.bindable:packages/com.timeslip.microframework.bindable/"
           )
 
           CHANGED=()
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             for pair in "${BUNDLES[@]}"; do
               NAME="${pair%%:*}"
               PATH="${pair##*:}"
-              if [ "${{ github.event.inputs.package_name }}" = "$NAME" ]; then
+              if [ "$PACKAGE_NAME" = "$NAME" ]; then
                 CHANGED+=("{\"name\":\"$NAME\",\"path\":\"$PATH\"}")
               fi
             done
           else
-            DIFF_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.event.before }} ${{ github.sha }})
+            # 检查before是否合法，否则fallback到HEAD~1..HEAD
+            if git rev-parse --quiet --verify "$BEFORE" >/dev/null; then
+              DIFF_FILES=$(git diff --name-only "$BEFORE" "$AFTER")
+            else
+              DIFF_FILES=$(git diff --name-only HEAD~1 HEAD)
+            fi
+
             for pair in "${BUNDLES[@]}"; do
               NAME="${pair%%:*}"
               PATH="${pair##*:}"
@@ -54,7 +68,7 @@ jobs:
             done
           fi
 
-          # 组装 JSON 数组作为输出
+          # 输出
           if [ ${#CHANGED[@]} -gt 0 ]; then
             echo "changed_packages=[$(IFS=,; echo "${CHANGED[*]}")]" >> $GITHUB_OUTPUT
           else
