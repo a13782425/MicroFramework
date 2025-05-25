@@ -35,7 +35,7 @@ jobs:
         echo "Package Name: ${{ matrix.package.name }}"
         echo "Package Path: ${{ matrix.package.path }}"
     - name: Build and publish ${{ matrix.package.name }}
-      if: contains(github.event.commits[0].added, matrix.package.path) || contains(github.event.commits[0].modified, matrix.package.path)
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
       run: |
         echo "Checking if changes match ${matrix.package.path}"
         cd ${{ matrix.package.path }}
