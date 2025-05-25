@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'packages/com.timeslip.microframework.core/package.json' # 只监控 package.json 文件的变化
+      - 'packages/com.timeslip.microframework.bindable/package.json'
   workflow_dispatch:
     inputs:
       package_name:
@@ -23,6 +24,8 @@ jobs:
         package: 
           - name: com.timeslip.microframework.core
             path: 'packages/com.timeslip.microframework.core/'
+          - name: com.timeslip.microframework.bindable
+            path: 'packages/com.timeslip.microframework.bindable/'
     steps:
     - uses: actions/checkout@v3
     
