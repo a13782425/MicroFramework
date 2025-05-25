@@ -9,7 +9,7 @@
   "license": "MIT",
   "documentationUrl": "http://blog.timeslip.cn/archives/unity-kuang-jia-he-xin-ku",
   "changelogUrl": "http://blog.timeslip.cn/archives/microframework.core-geng-xin-ri-zhi",
-  "description": "\u5fae\u6846\u67b6\u6838\u5fc3\u5e93"
+  "description": "\u5fae\u6846\u67b6\u6838\u5fc3\u5e93",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/@a13782425"
   }
