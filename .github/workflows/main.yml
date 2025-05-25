@@ -1,0 +1,36 @@
+name: Publish packages to GitHub Packages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/com.timeslip.microframework.core/**'
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package: 
+          - name: com.timeslip.microframework.core
+            path: 'packages/com.timeslip.microframework.core/**'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14.x'
+        registry-url: 'https://npm.pkg.github.com/'
+
+    - run: npm install --only=prod
+
+    - name: Build and publish ${{ matrix.package.name }}
+      if: contains(github.event.commits[0].added, matrix.package.path) || contains(github.event.commits[0].modified, matrix.package.path)
+      run: |
+        cd ${{ matrix.package.name }}
+        npm run build
+        npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
