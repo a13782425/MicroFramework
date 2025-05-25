@@ -98,11 +98,26 @@ jobs:
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_TOKEN }}" > ~/.npmrc
           echo "@a13782425:registry=https://npm.pkg.github.com/" >> ~/.npmrc
 
+      - name: Check if version already exists
+        id: check-version
+        run: |
+          cd ${{ matrix.package.path }}
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Checking $PKG_NAME@$PKG_VERSION"
+          if npm view "$PKG_NAME@$PKG_VERSION" --registry=https://npm.pkg.github.com/; then
+            echo "Version already exists."
+            echo "publish_needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version does not exist."
+            echo "publish_needed=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and publish ${{ matrix.package.name }}
+        if: steps.check-version.outputs.publish_needed == 'true'
         run: |
           cd ${{ matrix.package.path }}
           npm config set registry https://npm.pkg.github.com/
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
-
