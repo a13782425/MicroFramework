@@ -39,7 +39,6 @@ jobs:
       run: |
         echo "Checking if changes match ${{ matrix.package.path }}"
         cd ${{ matrix.package.path }}
-        npm run build
         npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
