@@ -7,6 +7,7 @@ on:
     paths:
       - 'packages/com.timeslip.microframework.core/package.json' # 只监控 package.json 文件的变化
       - 'packages/com.timeslip.microframework.bindable/package.json'
+      - 'packages/com.timeslip.microframework.promise/package.json'
   workflow_dispatch:
     inputs:
       package_name:
@@ -36,6 +37,7 @@ jobs:
           BUNDLES=(
             "com.timeslip.microframework.core:packages/com.timeslip.microframework.core/"
             "com.timeslip.microframework.bindable:packages/com.timeslip.microframework.bindable/"
+            "com.timeslip.microframework.promise:packages/com.timeslip.microframework.promise/"
           )
 
           CHANGED=()
