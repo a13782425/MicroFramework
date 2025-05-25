@@ -53,6 +53,7 @@ jobs:
       run: |
         echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
         echo "@a13782425:registry=https://npm.pkg.github.com/" >> ~/.npmrc
+        cat ~/.npmrc
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
@@ -61,6 +62,7 @@ jobs:
       run: |
         echo "Checking if changes match ${{ matrix.package.path }}"
         cd ${{ matrix.package.path }}
+        npm config set registry https://npm.pkg.github.com/
         npm publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
