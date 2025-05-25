@@ -6,7 +6,12 @@ on:
       - main
     paths:
       - 'packages/com.timeslip.microframework.core/**'
-
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: 'Publish Core'
+        required: true
+        default: 'com.timeslip.microframework.core'
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
