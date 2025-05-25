@@ -65,7 +65,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
         
     - name: Build and publish ${{ matrix.package.name }}
-      if: github.event_name == 'push' || || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
+      if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
       run: |
         echo "Checking if changes match ${{ matrix.package.path }}"
         cd ${{ matrix.package.path }}
