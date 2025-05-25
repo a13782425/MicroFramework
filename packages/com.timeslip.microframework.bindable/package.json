@@ -1,7 +1,14 @@
 {
   "name": "com.timeslip.microframework.bindable",
   "displayName": "MFramework.Bindable",
-  "version": "0.1.0-pre1",
-  "unity": "2022.3",
-  "description": "\u5fae\u6846\u67b6\u7684\u53ef\u7ed1\u5b9a\u7c7b\u578b"
+  "version": "0.1.0-pre.1",
+  "unity": "2021.3",
+  "author": {
+    "name": "timeslip"
+  },
+  "license": "MIT",
+  "description": "\u5fae\u6846\u67b6\u7684\u53ef\u7ed1\u5b9a\u7c7b\u578b",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@a13782425"
+  }
 }
