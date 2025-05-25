@@ -37,7 +37,7 @@ jobs:
     - name: Build and publish ${{ matrix.package.name }}
       if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.package_name == matrix.package.name)
       run: |
-        echo "Checking if changes match ${matrix.package.path}"
+        echo "Checking if changes match ${{ matrix.package.path }}"
         cd ${{ matrix.package.path }}
         npm run build
         npm publish
