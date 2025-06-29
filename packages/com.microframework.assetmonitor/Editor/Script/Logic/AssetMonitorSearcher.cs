@@ -1,0 +1,225 @@
+﻿using Codice.Client.BaseCommands.Fileinfo;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnityEngine.UIElements;
+
+namespace MFramework.AssetMonitor
+{
+    /// <summary>
+    /// 监控搜索
+    /// </summary>
+    public interface IAssetMonitorSearcher
+    {
+        /// <summary>
+        /// 搜索器名
+        /// </summary>
+        string SearcherName { get; }
+        /// <summary>
+        /// 搜索器描述
+        /// </summary>
+        string SearcherDescribe { get; }
+        /// <summary>
+        /// 搜索选项
+        /// 全部小写
+        /// </summary>
+        /// <example>
+        /// //当输入e或者ext时候调用该方法
+        /// public class ExtensionSearch : IAssetMonitorSearch
+        /// {
+        ///    public string[] SearchOptions => new string[] { "e", "ext" };
+        /// }
+        /// </example>
+        string[] SearchOptions { get; }
+        /// <summary>
+        /// 匹配
+        /// </summary>
+        /// <param name="record">缓存的数据</param>
+        /// <param name="value">输入的参数</param>
+        /// <returns></returns>
+        bool Match(AssetInfoRecord record, string value);
+    }
+
+    /// <summary>
+    /// 名称搜索
+    /// </summary>
+    internal sealed class NameAssetMonitorSearch : IAssetMonitorSearcher
+    {
+        public string SearcherName => "内置名称搜索";
+        public string SearcherDescribe => "";
+        public string[] SearchOptions => new string[] { "", "n", "name" };
+
+
+        public bool Match(AssetInfoRecord record, string value)
+        {
+            if (record == null)
+                return false;
+            if (value == null)
+                return true;
+            return record.FileName.ToLower().Contains(value);
+        }
+    }
+
+    /// <summary>
+    /// 拓展名搜索
+    /// </summary>
+    internal sealed class ExtensionAssetMonitorSearch : IAssetMonitorSearcher
+    {
+        public string SearcherName => "内置扩展名搜索";
+        public string SearcherDescribe => "";
+        public string[] SearchOptions => new string[] { "e", "ext", "extension" };
+
+        public bool Match(AssetInfoRecord record, string value)
+        {
+            if (record == null)
+                return false;
+            if (record.IsDirectory)
+                return false;
+            if (value == null)
+                return true;
+            var extension = Path.GetExtension(record.FileName).ToLower().TrimStart('.');
+            return extension == value.ToLower().TrimStart('.');
+        }
+    }
+    /// <summary>
+    /// 大小搜索
+    /// </summary>
+    internal sealed class SizeAssetMonitorSearch : IAssetMonitorSearcher
+    {
+        public string SearcherName => "内置扩展名搜索";
+        public string SearcherDescribe => "";
+        public string[] SearchOptions => new string[] { "s", "size" };
+
+        public bool Match(AssetInfoRecord record, string value)
+        {
+            if (record == null)
+                return false;
+            if (record.IsDirectory)
+                return false;
+            if (value == null)
+                return true;
+            long targetSize = 0;
+            long fileSize = record.Size;
+            try
+            {
+                // 支持 >100kb, <1mb, =500b 等格式
+                if (value.StartsWith(">"))
+                {
+                    targetSize = m_parseSizeString(value.Substring(1));
+                    return fileSize > targetSize;
+                }
+                else if (value.StartsWith("<"))
+                {
+                    targetSize = m_parseSizeString(value.Substring(1));
+                    return fileSize < targetSize;
+                }
+                else if (value.StartsWith("="))
+                {
+                    targetSize = m_parseSizeString(value.Substring(1));
+                    return Math.Abs(fileSize - targetSize) < 1024; // 1KB 误差范围
+                }
+                else
+                {
+                    targetSize = m_parseSizeString(value);
+                    return Math.Abs(fileSize - targetSize) < 1024;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+        }
+
+        // 添加大小字符串解析方法
+        private long m_parseSizeString(string sizeStr)
+        {
+            sizeStr = sizeStr.ToLower().Trim();
+
+            long multiplier = 1;
+            if (sizeStr.EndsWith("k"))
+            {
+                multiplier = 1024;
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 1);
+            }
+            else if (sizeStr.EndsWith("kb"))
+            {
+                multiplier = 1024;
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2);
+            }
+            if (sizeStr.EndsWith("m"))
+            {
+                multiplier = 1024 * 1024;
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 1);
+            }
+            else if (sizeStr.EndsWith("mb"))
+            {
+                multiplier = 1024 * 1024;
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2);
+            }
+            if (sizeStr.EndsWith("g"))
+            {
+                multiplier = 1024 * 1024 * 1024;
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 1);
+            }
+            else if (sizeStr.EndsWith("gb"))
+            {
+                multiplier = 1024 * 1024 * 1024;
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 2);
+            }
+            else if (sizeStr.EndsWith("b"))
+            {
+                sizeStr = sizeStr.Substring(0, sizeStr.Length - 1);
+            }
+
+            if (double.TryParse(sizeStr, out double value))
+                return (long)(value * multiplier);
+
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// 类型搜索
+    /// </summary>
+    internal sealed class TypeAssetMonitorSearch : IAssetMonitorSearcher
+    {
+        public string SearcherName => "内置类型搜索";
+
+        public string SearcherDescribe => "";
+
+        public string[] SearchOptions => new string[] { "t", "type" };
+
+        public bool Match(AssetInfoRecord record, string value)
+        {
+            if (record.IsDirectory)
+                return value == "folder" || value == "directory" || value == "dir";
+            var extension = Path.GetExtension(record.FilePath).ToLower();
+
+            return value switch
+            {
+                "script" => extension == ".cs" || extension == ".js" || extension == ".ts",
+                "shader" => extension == ".shader" || extension == ".hlsl" || extension == ".cginc" || extension == ".compute",
+                "material" => extension == ".mat",
+                "prefab" => extension == ".prefab",
+                "scene" => extension == ".unity",
+                "texture" => extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
+                            extension == ".tga" || extension == ".bmp" || extension == ".gif" ||
+                            extension == ".psd" || extension == ".tiff",
+                "model" => extension == ".fbx" || extension == ".obj" || extension == ".dae" ||
+                          extension == ".3ds" || extension == ".blend",
+                "audio" => extension == ".wav" || extension == ".mp3" || extension == ".ogg" ||
+                          extension == ".aiff" || extension == ".flac",
+                "video" => extension == ".mp4" || extension == ".mov" || extension == ".avi" ||
+                          extension == ".webm" || extension == ".mkv",
+                "font" => extension == ".ttf" || extension == ".otf",
+                "text" => extension == ".json" || extension == ".xml" || extension == ".txt" ||
+                         extension == ".csv" || extension == ".md" || extension == ".bytes",
+                _ => extension.TrimStart('.') == value
+            };
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "name": "MFramework.UI.Runtime",
+    "rootNamespace": "MFramework.UI",
+    "references": [
+        "GUID:afc4e8d280ae4c94eb0253f659341780",
+        "GUID:e8582340c4c2a494b814e2f98c4d087d",
+        "GUID:371748e82bde03b488fb7b81b5614e11"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

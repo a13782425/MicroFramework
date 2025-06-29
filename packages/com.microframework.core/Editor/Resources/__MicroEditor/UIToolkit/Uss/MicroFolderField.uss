@@ -1,0 +1,93 @@
+/* FolderField.uss */
+
+.micro-folder-field {
+    margin-top: 1px;
+    margin-bottom: 1px;
+    margin-left: 3px;
+    margin-right: 3px;
+    flex-direction: row;
+    overflow: hidden;
+    flex-shrink: 0;
+    white-space: nowrap;
+    --unity-selection-color: rgba(61, 128, 223, 0.651);
+    --unity-cursor-color: rgba(180, 180, 180, 1);
+}
+
+.micro-folder-field-main {
+    min-height: 20px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.micro-folder-field-label {
+    -unity-font-style: normal;
+    min-width: 120px;
+    margin-right: 2px;
+    color: rgba(196, 196, 196, 1);
+}
+
+.micro-folder-field-input-container {
+    min-height: 20px;
+    border-radius: 3px;
+    flex-direction: row;
+    flex-grow: 1;
+    align-items: stretch;
+
+}
+
+.micro-folder-field-text {
+   /*  border-top-right-radius: 0;
+    border-bottom-right-radius: 0; */
+    /* border-right-width: 0;
+    background-color: white;
+    margin-right: 0; */
+    flex-grow: 1;
+}
+
+.micro-folder-field-text.error {
+    border-color: rgb(255, 100, 100);
+    background-color: rgba(255, 100, 100, 0.1);
+}
+
+.micro-folder-field-placeholder {
+    color: rgb(150, 150, 150);
+    -unity-font-style: italic;
+    /* pointer-events: none; */
+    -unity-text-align: middle-left;
+    position: absolute;
+    left: 8px;
+    top: 0px;
+    bottom: 0px;
+}
+
+.micro-folder-field-validation {
+    margin-top: 2px;
+}
+
+/* .micro-folder-field-button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left-width: 1px;
+    background-color: rgb(220, 220, 220);
+    font-size: 11px;
+    padding: 2px 8px;
+}
+
+.micro-folder-field-button:hover {
+    background-color: rgb(200, 200, 200);
+}
+
+.micro-folder-field-button:active {
+    background-color: rgb(180, 180, 180);
+}
+
+.micro-folder-field-button:disabled {
+    background-color: rgb(240, 240, 240);
+    color: rgb(150, 150, 150);
+}
+
+.micro-folder-field-validation {
+    font-size: 11px;
+    padding: 4px;
+    border-radius: 3px;
+} */

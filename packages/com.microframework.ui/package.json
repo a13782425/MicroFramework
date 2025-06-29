@@ -1,0 +1,16 @@
+{
+  "name": "com.microframework.ui",
+  "displayName": "MFramework.UI",
+  "version": "0.1.0-pre1",
+  "unity": "2022.3",
+  "author": {
+    "name": "timeslip"
+  },
+  "description": "Replace this string with your own description of the package. This description appears in the Package Manager window when the user selects this package from the list. \n\nFor best results, use this text to summarize: \n\u25aa What the package does \n\u25aa How it can benefit the user \n\nNote: Special formatting characters are supported, including line breaks ('\\n') and bullets ('\\u25AA').",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0",
+    "com.microframework.core": "0.1.0-pre.1",
+    "com.microframework.bindable": "0.1.0-pre.1",
+    "com.microframework.resource": "0.1.0-pre.1"
+  }
+}

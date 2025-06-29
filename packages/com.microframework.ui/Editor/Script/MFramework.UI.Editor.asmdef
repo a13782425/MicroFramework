@@ -1,0 +1,21 @@
+{
+    "name": "MFramework.UI.Editor",
+    "rootNamespace": "MFramework.UI",
+    "references": [
+        "MFramework.Core",
+        "MFramework.Core.Editor",
+        "MFramework.UI.Runtime",
+        "MFramework.Resource.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

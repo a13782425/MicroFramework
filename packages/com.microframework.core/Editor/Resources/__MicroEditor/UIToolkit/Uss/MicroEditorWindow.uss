@@ -1,0 +1,122 @@
+VisualElement {
+	-unity-font: resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+    -unity-font-definition : resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+	font-size: 14px;
+}
+.window-splitter-leftpane{
+	min-width: 200px;
+	padding: 2px;
+	flex-grow: 0;
+}
+
+.window-splitter-rightpane{
+	padding: 2px;
+	flex-grow: 1;
+}
+
+.unity-two-pane-split-view__dragline-anchor--horizontal{
+	width: 2px;
+    background-color: rgba(0,0,0,1);
+}
+
+
+.config-select-container{
+	margin-top: 2px;
+	border-width: 2px;
+	border-color: rgba(0,0,0,1);
+	/* border-style: solid; */
+	flex-direction: row;
+	padding-left: 2px;
+	padding-right: 2px;
+}
+.config-select-container > Label{
+	align-self: center;
+	/* -unity-font-style: bold; */
+	-unity-text-align: middle-center;
+	flex-grow: 0;
+}
+.config-select-container > MicroDropdownField{
+	flex-grow: 1;
+	min-width: 96px;
+}
+
+.config-select-container > .config-name-field{
+	flex-grow: 1;
+	min-width: 96px;
+}
+
+.config-select-container > .config-select-edit-button{
+	height: 24px;
+	width: 24px;
+	align-self: center;
+	padding: 0px;
+	margin-left: 2px;
+	margin-right: 2px;
+	background-image: resource("__MicroEditor/Icon/edit");
+	background-color: transparent;
+}
+
+.unity-list-view__reorderable-item > .unity-list-view__reorderable-handle, .unity-list-view__reorderable-item__container { 
+	align-self: center;
+}
+
+#container .unity-composite-field__field-spacer{
+	display: none;
+}
+
+.micro-h1{
+	font-size: 26px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+	-unity-font-style: bold;
+}
+
+.micro-h2{
+	font-size: 24px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+	-unity-font-style: bold;
+}
+
+.micro-h3{
+	font-size: 22px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+}
+
+.micro-h3{
+	font-size: 20px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+}
+
+.micro-h4{
+	font-size: 18px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+}
+
+.micro-h5{
+	font-size: 16px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+}
+
+.micro-h6{
+	font-size: 14px;
+	text-shadow: -1px 1px rgba(0,0,0,1);
+}
+
+.micro-italic{
+	-unity-font-style: italic;
+}
+
+.micro-box{
+    margin-top: 2px;
+	margin-bottom: 2px;
+	border-left-width: 1px;
+	border-right-width: 1px;
+	border-color: rgba(74,74,74,1);
+}
+.micro-box-title{
+	margin: 4px;
+	padding: 2px;
+	font-size: 14px;
+	-unity-font-style: bold;
+    color: rgba(255,255,255,1);
+	background-color: rgba(70, 96, 124, 0.5);
+}

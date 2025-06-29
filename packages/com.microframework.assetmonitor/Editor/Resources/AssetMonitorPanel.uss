@@ -1,0 +1,134 @@
+/* AssetMonitorPanel {
+	color: #ff0000;
+} */
+:root {
+	flex-grow: 1;
+}
+
+.assetmonitor-panel{
+	margin-top: 2px;
+	margin-bottom: 2px;
+}
+
+.assetmonitor-panel__tab{
+	padding-left: 4px;
+	padding-right: 4px;
+	flex-direction: row;
+	height: 24px;
+}
+.assetmonitor-panel__tab-button{
+	-unity-font-style: bold;
+    background-color: #4a4a4a;
+    border-width: 1px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    margin-right: 2px;
+	width: 96px;
+}
+.assetmonitor-panel__tab-button:checked{
+	background-color: rgba(70, 96, 124, 1);
+}
+.assetmonitor-panel__tab-icon{
+}
+
+
+.assetmonitor-panel__page{
+	flex-grow: 1;
+}
+.assetmonitor-panel__page-container{
+	flex-grow: 1;
+}
+
+.assetmonitor-panel__project{ 
+    flex-grow: 1;
+}
+
+.assetmonitor-panel__project__init{ 
+    flex-grow: 1;
+	justify-content: center;
+}
+
+.assetmonitor-panel__project__init-btn{ 
+    -unity-text-align: middle-center;
+	-unity-font-style: bold;	
+	font-size: 32px;
+	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+	width: 50%;
+	align-self: center;
+}
+
+
+.assetmonitor-panel__project__folder{ 
+    flex-grow: 1;
+}
+.assetmonitor-panel__project__folder-item{ 
+    flex-direction: row;
+	align-items: center;
+	padding-left: 4px;
+    padding-right: 4px;
+	height: 24px;
+}
+
+.assetmonitor-panel__project__folder-item-icon-image{ 
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+}
+
+.assetmonitor-panel__project__folder-item-name-label{ 
+    flex-grow: 1;
+    font-size: 12px;
+	-unity-text-align: middle-left;
+}
+.assetmonitor-panel__project__folder-item-size-label{ 
+	color: rgba(178, 178, 178, 1);
+    margin-left: 10px;
+	min-width: 80px;
+    font-size: 10px;
+	-unity-text-align: middle-right;
+}
+.assetmonitor-panel__project__folder-item-count-label{ 
+	color: rgba(153, 153, 153, 1);
+    margin-left: 5px;
+	min-width: 50px;
+    font-size: 9px;
+	-unity-text-align: middle-right;
+}
+.assetmonitor-panel__project__folder-item-ref-btn{ 
+	color: rgba(178, 178, 178, 1);
+	width: 36px;
+	padding-left: 2px;
+	padding-right: 2px;
+	background-color: rgba(0, 190, 0, 0.5);
+    font-size: 10px;
+	-unity-text-align: middle-center;
+}
+.assetmonitor-panel__project__folder-item-dep-btn{ 
+	color: rgba(178, 178, 178, 1);
+	width: 36px;
+	padding-left: 2px;
+	padding-right: 2px;
+	background-color: rgba(190, 128, 0, 0.5);
+    font-size: 10px;
+	-unity-text-align: middle-center;
+}
+
+.assetmonitor-panel__project__ref{ 
+    flex-grow: 1;
+}
+.assetmonitor-panel__project__ref-title-label{ 
+	background-color: rgba(76, 76, 76, 1);
+    font-size: 14px;
+	padding: 5px;
+	-unity-font-style: bold;
+}
+
+/* .assetmonitor-panel__project__ref{ 
+    flex-grow: 1;
+}
+
+.assetmonitor-panel__project__ref-title-label{ 
+    font-size: 14px;
+	padding: 5px;
+	background-color: rgba(190, 128, 0, 1f);
+} */

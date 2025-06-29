@@ -1,0 +1,23 @@
+{
+    "name": "MFramework.UI.MVVM.Editor",
+    "rootNamespace": "MFramework.Editor",
+    "references": [
+        "GUID:afc4e8d280ae4c94eb0253f659341780",
+        "GUID:bb385a198e6e182428e76c1aac265e89",
+        "GUID:1fc11c2e2991efa41b2ebf5e2ae79f79",
+        "GUID:e8582340c4c2a494b814e2f98c4d087d"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "MVVM"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
