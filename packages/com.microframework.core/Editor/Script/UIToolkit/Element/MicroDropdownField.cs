@@ -140,7 +140,7 @@ namespace MFramework.Core.Editor
     }
     public sealed class MicroDropdownField : BaseField<string>
     {
-        const string k_UssPath = "UIToolkit/Uss/MicroDropdownField";
+        const string STYLE_SHEET = "UIToolkit\\Element\\MicroDropdownField";
         private class WindowContent : PopupWindowContent
         {
             const string k_SelectionContextKey = "MicroDropdownField.SelectionContext";
@@ -238,7 +238,7 @@ namespace MFramework.Core.Editor
 
             public override void OnOpen()
             {
-                editorWindow.rootVisualElement.AddStyleSheet(k_UssPath);
+                editorWindow.rootVisualElement.AddStyleSheet(STYLE_SHEET);
                 editorWindow.rootVisualElement.focusable = true;
 
                 editorWindow.rootVisualElement.AddToClassList(k_BaseClass);
@@ -702,7 +702,7 @@ namespace MFramework.Core.Editor
         public MicroDropdownField(string label)
             : base(label, new VisualElement() { name = "SearchDropdownVisualInput" })
         {
-            this.AddStyleSheet(k_UssPath);
+            this.AddStyleSheet(STYLE_SHEET);
             AddToClassList(k_UssClassNameBasePopupField);
             base.labelElement.AddToClassList(k_LabelUssClassNameBasePopupField);
             m_Input = new PopupTextElement

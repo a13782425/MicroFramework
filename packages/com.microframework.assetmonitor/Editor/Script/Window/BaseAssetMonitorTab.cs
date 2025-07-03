@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine.UIElements;
+﻿using UnityEngine.UIElements;
 
 namespace MFramework.AssetMonitor
 {
@@ -18,7 +13,7 @@ namespace MFramework.AssetMonitor
         /// </summary>
         private VisualElement _container;
         internal protected VisualElement container => _container;
-        protected AssetMonitorPanel panel { get; private set; }
+        protected AssetMonitorWindow window { get; private set; }
         /// <summary>
         /// 标题
         /// </summary>
@@ -41,9 +36,9 @@ namespace MFramework.AssetMonitor
             _container = new VisualElement();
             _container.AddToClassList(AssetMonitorConst.USS_PAGE_CONTAINER_CLASS);
         }
-        public virtual void Init(AssetMonitorPanel panel)
+        public virtual void Init(AssetMonitorWindow window)
         {
-            this.panel = panel;
+            this.window = window;
         }
 
         public virtual void Show()

@@ -1,45 +1,39 @@
-﻿using Codice.Client.BaseCommands.Fileinfo;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine.UIElements;
 
 namespace MFramework.AssetMonitor
 {
     /// <summary>
-    /// 监控搜索
+    /// 搜索器, 可实现资源属性的多维度匹配查询
     /// </summary>
     public interface IAssetMonitorSearcher
     {
         /// <summary>
         /// 搜索器名
         /// </summary>
-        string SearcherName { get; }
+        string Name { get; }
         /// <summary>
         /// 搜索器描述
         /// </summary>
-        string SearcherDescribe { get; }
+        string Description { get; }
         /// <summary>
-        /// 搜索选项
+        /// 搜索前缀
         /// 全部小写
         /// </summary>
         /// <example>
-        /// //当输入e或者ext时候调用该方法
+        /// //当输入e或者ext时候调用该类型,既e:txt
         /// public class ExtensionSearch : IAssetMonitorSearch
         /// {
         ///    public string[] SearchOptions => new string[] { "e", "ext" };
         /// }
         /// </example>
-        string[] SearchOptions { get; }
+        string[] SearchPrefixes { get; }
         /// <summary>
         /// 匹配
         /// </summary>
         /// <param name="record">缓存的数据</param>
         /// <param name="value">输入的参数</param>
-        /// <returns></returns>
+        /// <returns>是否匹配</returns>
         bool Match(AssetInfoRecord record, string value);
     }
 
@@ -48,9 +42,9 @@ namespace MFramework.AssetMonitor
     /// </summary>
     internal sealed class NameAssetMonitorSearch : IAssetMonitorSearcher
     {
-        public string SearcherName => "内置名称搜索";
-        public string SearcherDescribe => "";
-        public string[] SearchOptions => new string[] { "", "n", "name" };
+        public string Name => "内置名称搜索";
+        public string Description => "";
+        public string[] SearchPrefixes => new string[] { "", "n", "name" };
 
 
         public bool Match(AssetInfoRecord record, string value)
@@ -59,28 +53,46 @@ namespace MFramework.AssetMonitor
                 return false;
             if (value == null)
                 return true;
-            return record.FileName.ToLower().Contains(value);
+            return record.AssetName.ToLower().Contains(value);
         }
     }
+    /// <summary>
+    /// Guid搜索
+    /// </summary>
+    internal sealed class GuidAssetMonitorSearch : IAssetMonitorSearcher
+    {
+        public string Name => "内置Guid搜索";
+        public string Description => "";
+        public string[] SearchPrefixes => new string[] { "g", "guid" };
 
+
+        public bool Match(AssetInfoRecord record, string value)
+        {
+            if (record == null)
+                return false;
+            if (value == null)
+                return true;
+            return record.Guid.ToLower().Contains(value);
+        }
+    }
     /// <summary>
     /// 拓展名搜索
     /// </summary>
     internal sealed class ExtensionAssetMonitorSearch : IAssetMonitorSearcher
     {
-        public string SearcherName => "内置扩展名搜索";
-        public string SearcherDescribe => "";
-        public string[] SearchOptions => new string[] { "e", "ext", "extension" };
+        public string Name => "内置扩展名搜索";
+        public string Description => "";
+        public string[] SearchPrefixes => new string[] { "e", "ext" };
 
         public bool Match(AssetInfoRecord record, string value)
         {
             if (record == null)
                 return false;
-            if (record.IsDirectory)
+            if (record.IsFolder)
                 return false;
             if (value == null)
                 return true;
-            var extension = Path.GetExtension(record.FileName).ToLower().TrimStart('.');
+            var extension = Path.GetExtension(record.AssetName).ToLower().TrimStart('.');
             return extension == value.ToLower().TrimStart('.');
         }
     }
@@ -89,15 +101,15 @@ namespace MFramework.AssetMonitor
     /// </summary>
     internal sealed class SizeAssetMonitorSearch : IAssetMonitorSearcher
     {
-        public string SearcherName => "内置扩展名搜索";
-        public string SearcherDescribe => "";
-        public string[] SearchOptions => new string[] { "s", "size" };
+        public string Name => "内置大小搜索";
+        public string Description => "";
+        public string[] SearchPrefixes => new string[] { "s", "size" };
 
         public bool Match(AssetInfoRecord record, string value)
         {
             if (record == null)
                 return false;
-            if (record.IsDirectory)
+            if (record.IsFolder)
                 return false;
             if (value == null)
                 return true;
@@ -187,17 +199,17 @@ namespace MFramework.AssetMonitor
     /// </summary>
     internal sealed class TypeAssetMonitorSearch : IAssetMonitorSearcher
     {
-        public string SearcherName => "内置类型搜索";
+        public string Name => "内置类型搜索";
 
-        public string SearcherDescribe => "";
+        public string Description => "";
 
-        public string[] SearchOptions => new string[] { "t", "type" };
+        public string[] SearchPrefixes => new string[] { "t", "type" };
 
         public bool Match(AssetInfoRecord record, string value)
         {
-            if (record.IsDirectory)
+            if (record.IsFolder)
                 return value == "folder" || value == "directory" || value == "dir";
-            var extension = Path.GetExtension(record.FilePath).ToLower();
+            var extension = Path.GetExtension(record.AssetPath).ToLower();
 
             return value switch
             {

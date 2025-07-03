@@ -1,4 +1,25 @@
-MTreeView {
+
+
+.mtree-view{
+	flex-grow: 1;
+}
+.mtree-view__listview{
+	flex-grow: 1;
+}
+.mtree-view__listview-scroll > .unity-list-view__empty-label{
+	display: none;
+}
+
+
+.mtree-view__item{
+	flex-direction: row;
+	flex-grow: 1;
+}
+.mtree-view__item-container{
+	flex-grow: 1;
+}
+
+/* MTreeView {
 	flex-grow: 1;
 }
 
@@ -31,4 +52,4 @@ MTreeView .tree-view-item:checked{
 	border-width: 1px;
 	border-color: rgba(89,105,130,1);
 	background-color: rgba(64,69,77,1);
-}
+} */

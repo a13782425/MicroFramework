@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.IMGUI.Controls;
 using UnityEditor.PackageManager.UI;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -13,57 +14,13 @@ namespace MFramework.Core.Editor
     internal sealed class MicroEditorWindow : EditorWindow
     {
         private static BaseMicroLayout s_currentMicroLayout;
-        internal class MTreeViewItem : ITreeViewItem
+        private class MicroLayoutTreeItem
         {
-            private List<ITreeViewItem> _children = new List<ITreeViewItem>();
             public string name { get; set; }
-            public object userData { get; set; }
-            public ITreeViewItem parent { get; set; }
-            public bool hasChildren => children.Count > 0;
-
             public BaseMicroLayout microLayout { get; set; }
-            public List<ITreeViewItem> children => _children;
-
-            public int index { get; set; }
-
-            public string tooltip => microLayout.GetType().FullName;
-
-            public void OnSelect()
-            {
-            }
-
-            public void OnClick()
-            {
-                var window = MicroContextEditor.GetMicroEditorWindow();
-                if (s_currentMicroLayout != null)
-                {
-                    s_currentMicroLayout?.HideUI();
-                    s_currentMicroLayout.panel.style.flexGrow = 0;
-                    s_currentMicroLayout.panel.style.display = DisplayStyle.None;
-                }
-                window.rightPane.Clear();
-                window.rightPane.Add(microLayout.panel);
-                microLayout.panel.style.flexGrow = 1;
-                microLayout.panel.style.display = DisplayStyle.Flex;
-                microLayout.ShowUI();
-                MicroContextEditor.SetLastSelectTreeNode(microLayout.Title);
-                s_currentMicroLayout = microLayout;
-            }
-
-            public void AddChild(ITreeViewItem child)
-            {
-                children.Add(child);
-                child.parent = this;
-            }
-
-            public void RemoveChild(ITreeViewItem child)
-            {
-                children.Remove(child);
-                child.parent = null;
-            }
         }
 
-        private const string STYLE_SHEET = "UIToolkit\\Uss\\MicroEditorWindow";
+        private const string STYLE_SHEET = "UIToolkit\\MicroEditorWindow";
 
 
         public MTreeView treeView { get; private set; }
@@ -146,13 +103,14 @@ namespace MFramework.Core.Editor
             m_createConfigSelectContanier();
 
             treeView = new MTreeView();
-            m_generateLayoutModel(treeView.items);
-            m_sortTreeView(treeView.items);
+            m_generateLayoutModel(treeView.RootItems);
+            m_sortTreeView(treeView.RootItems);
 
 
             leftPane.Add(treeView);
             treeView.onBindItem += m_onBindItem;
             treeView.onMakeItem += m_onMakeItem;
+            treeView.onItemsChosen += m_onItemsChosen;
             treeView.Rebuild();
             m_selectLastIndex();
             this.rootVisualElement.parent?.RegisterCallback<KeyDownEvent>(onKeyDownEvent);
@@ -401,14 +359,13 @@ namespace MFramework.Core.Editor
             {
                 return;
             }
-            ITreeViewItem root = treeView.items.FirstOrDefault(a => a.name == strs[0]);
+            var root = treeView.RootItems.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == strs[0]);
             int index = 1;
             while (root != null)
             {
-                treeView.OnItemChosen(root);
                 if (index < strs.Length)
                 {
-                    root = root.children.FirstOrDefault(a => a.name == strs[index]);
+                    root = root.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == strs[index]);
                     index++;
                 }
                 else
@@ -416,14 +373,15 @@ namespace MFramework.Core.Editor
                     break;
                 }
             }
-            treeView.OnItemSelect(root);
+            treeView.ExpandItem(root);
+            treeView.SetItemChosen(root, true);
         }
-        private void m_sortTreeView(List<ITreeViewItem> items)
+        private void m_sortTreeView(List<MTreeViewItemData> items)
         {
             items.Sort((a, b) =>
             {
-                var first = a as MTreeViewItem;
-                var second = b as MTreeViewItem;
+                var first = a.Data as MicroLayoutTreeItem;
+                var second = b.Data as MicroLayoutTreeItem;
                 if (first.microLayout is RootMicroLayout)
                     return -1;
                 else if (second.microLayout is RootMicroLayout)
@@ -436,16 +394,16 @@ namespace MFramework.Core.Editor
             });
             foreach (var item in items)
             {
-                if (item.hasChildren)
+                if (item.HasChildren)
                 {
-                    m_sortTreeView(item.children);
+                    m_sortTreeView(item.Children);
                 }
             }
         }
-        private void m_generateLayoutModel(List<ITreeViewItem> rootList)
+        private void m_generateLayoutModel(List<MTreeViewItemData> rootList)
         {
-            MTreeViewItem rootTreeItem = new MTreeViewItem();
-            rootTreeItem.children.AddRange(rootList);
+            MTreeViewItemData rootTreeItem = new MTreeViewItemData(null);
+            //rootTreeItem.children.AddRange(rootList);
             foreach (MicroLayoutModel item in _microLayoutModels)
             {
                 item.MicroLayout.window = this;
@@ -456,49 +414,74 @@ namespace MFramework.Core.Editor
                     logger.LogError($"视图:{item.MicroLayout.Title}初始化失败");
                     continue;
                 }
-                MTreeViewItem parent = rootTreeItem;
+                MTreeViewItemData parent = rootTreeItem;
                 for (int i = 0; i < item.TitleLayers.Length - 1; i++)
                 {
                     string group = item.TitleLayers[i];
-                    MTreeViewItem tempItem = parent.children.FirstOrDefault(a => a.name == group) as MTreeViewItem;
-                    if (tempItem == null)
+                    MTreeViewItemData itemData = parent.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == group);
+                    if (itemData == null)
                     {
-                        tempItem = new MTreeViewItem();
+                        var tempItem = new MicroLayoutTreeItem();
                         tempItem.name = group;
                         tempItem.microLayout = new DefaultMicroLayout();
                         tempItem.microLayout.window = this;
                         tempItem.microLayout.panel = new VisualElement();
                         tempItem.microLayout.panel.name = "container";
-                        parent.AddChild(tempItem);
+                        itemData = new MTreeViewItemData(tempItem);
+                        parent.AddChild(itemData);
                     }
-                    if (tempItem.microLayout is DefaultMicroLayout defaultMicro)
+                    if (itemData.GetData<MicroLayoutTreeItem>().microLayout is DefaultMicroLayout defaultMicro)
                     {
                         defaultMicro.SetPriority(item.Priority);
                     }
-                    parent = tempItem;
+                    parent = itemData;
                 }
                 string curName = item.TitleLayers[item.TitleLayers.Length - 1];
-                MTreeViewItem childItem = parent.children.FirstOrDefault(a => a.name == curName) as MTreeViewItem;
-                if (childItem == null || (childItem.microLayout is { } layout && layout.GetType() != typeof(DefaultMicroLayout)))
+                MTreeViewItemData childItem = parent.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == curName);
+                if (childItem == null || (childItem.GetData<MicroLayoutTreeItem>()).microLayout is { } layout && layout.GetType() != typeof(DefaultMicroLayout))
                 {
-                    childItem = new MTreeViewItem();
-                    childItem.name = curName;
+                    var tempItem = new MicroLayoutTreeItem();
+                    tempItem.name = curName;
+                    childItem = new MTreeViewItemData(tempItem);
                     parent.AddChild(childItem);
                 }
-                childItem.microLayout = item.MicroLayout;
+                childItem.GetData<MicroLayoutTreeItem>().microLayout = item.MicroLayout;
             }
-            rootList.AddRange(rootTreeItem.children);
+            rootList.AddRange(rootTreeItem.Children);
+        }
+        private void m_onItemsChosen(IEnumerable<MTreeViewItemData> enumerable)
+        {
+            var treeData = enumerable.FirstOrDefault();
+            if (treeData == null)
+                return;
+            MicroLayoutTreeItem microLayoutTreeItem = treeData.GetData<MicroLayoutTreeItem>();
+            if (microLayoutTreeItem.microLayout == null)
+                return;
+            var window = MicroContextEditor.GetMicroEditorWindow();
+            if (s_currentMicroLayout != null)
+            {
+                s_currentMicroLayout?.HideUI();
+                s_currentMicroLayout.panel.style.flexGrow = 0;
+                s_currentMicroLayout.panel.style.display = DisplayStyle.None;
+            }
+            rightPane.Clear();
+            rightPane.Add(microLayoutTreeItem.microLayout.panel);
+            microLayoutTreeItem.microLayout.panel.style.flexGrow = 1;
+            microLayoutTreeItem.microLayout.panel.style.display = DisplayStyle.Flex;
+            microLayoutTreeItem.microLayout.ShowUI();
+            MicroContextEditor.SetLastSelectTreeNode(microLayoutTreeItem.microLayout.Title);
+            s_currentMicroLayout = microLayoutTreeItem.microLayout;
         }
         private VisualElement m_onMakeItem()
         {
             return new Label();
         }
-        private void m_onBindItem(VisualElement element, ITreeViewItem item)
+        private void m_onBindItem(VisualElement element, MTreeViewItemData item)
         {
             Label label = element.Q<Label>();
             if (label != null)
             {
-                label.text = item.name;
+                label.text = item.GetData<MicroLayoutTreeItem>().name;
             }
         }
 

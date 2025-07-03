@@ -64,6 +64,25 @@ VisualElement {
 	display: none;
 }
 
+
+.mtree-view__item-container -> Label{
+	-unity-text-align: middle-left;
+}
+.mtree-view__item -> Toggle{
+	align-items: center;
+	margin: 0px;	
+}
+.mtree-view__item{
+	margin: 2px;
+}
+.mtree-view__item:checked{
+	border-width: 1px;
+	border-color: rgba(89,105,130,1);
+	background-color: rgba(64,69,77,1);
+}
+
+
+
 .micro-h1{
 	font-size: 26px;
 	text-shadow: -1px 1px rgba(0,0,0,1);

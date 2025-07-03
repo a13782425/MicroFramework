@@ -9,9 +9,12 @@ namespace MFramework.Core
 {
     internal sealed class DefaultMicroLayout : BaseMicroLayout
     {
-        public override string Title { get; }
+        private string _title;
+        public override string Title => _title;
         private int _priority = 0;
         public override int Priority => _priority;
+
+        internal void SetTitle(string title) => this._title = title;
         internal void SetPriority(int priority) => this._priority = priority;
     }
 }

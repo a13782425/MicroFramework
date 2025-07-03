@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using static MFramework.AssetMonitor.AssetMonitorConst;
@@ -8,65 +9,66 @@ using static MFramework.AssetMonitor.AssetMonitorConst;
 namespace MFramework.AssetMonitor
 {
     /// <summary>
-    /// 资源类型
-    /// </summary>
-    [Serializable]
-    /// <summary>
     /// 定义资源的类型，用于标识不同来源或用途的资源。
     /// </summary>
+    [Flags]
+    [Serializable]
     public enum AssetKind : byte
     {
         /// <summary>
+        /// 占位符
+        /// </summary>
+        None = 0,
+        /// <summary>
         /// 常规资源（默认类型）。
         /// </summary>
-        Regular = 0,
+        NormalAsset = 1 << 1,
         /// <summary>
         /// 文件夹资源。
         /// </summary>
-        Folder = 1,
-        /// <summary>
-        /// 特殊文件夹
-        /// </summary>
-        SpecialFolder = 2,
+        NormalFolder = 1 << 2,
         /// <summary>
         /// 特殊资源
+        /// 有GUID 但是在Unity安装目录的
         /// </summary>
-        SpecialRegular = 2,
-        ///// <summary>
-        ///// 设置类资源，通常用于配置文件等。
-        ///// </summary>
-        //Settings = 10,
-        ///// <summary>
-        ///// 来自包的资源，表示该资源来源于外部包。
-        ///// </summary>
-        //FromPackage = 20,
-        ///// <summary>
-        ///// 来自嵌入式包的资源，表示该资源来源于项目内部嵌入的包。
-        ///// </summary>
-        //FromEmbeddedPackage = 30,
-        ///// <summary>
-        ///// 不支持的资源类型，用于处理未知或不兼容的资源。
-        ///// </summary>
-        //Unsupported = 100
-    }
+        SpecialAsset = 1 << 3,
+        /// <summary>
+        /// 特殊文件夹
+        /// 没有GUID的 特指Packages
+        /// </summary>
+        SpecialFolder = 1 << 4,
+        /// <summary>
+        /// 来自Library的资源，表示该资源来源于Unity的Library文件夹。
+        /// </summary>
+        LibraryAsset = 1 << 5,
+        /// <summary>
+        /// 来自Library的文件夹，表示该资源来源于Unity的Library文件夹。
+        /// </summary>
+        LibraryFolder = 1 << 6,
 
-    /// <summary>
-    /// 关系类型
-    /// </summary>
-    public enum RelationType : byte
-    {
+
         /// <summary>
-        /// Unity引用
+        /// 特殊标识
         /// </summary>
-        Unity,
+        Special = SpecialAsset | SpecialFolder,
         /// <summary>
-        /// 自定义引用
+        /// 该资源来源于Unity的Library文件夹。
         /// </summary>
-        Custom,
+        Library = LibraryAsset | LibraryFolder,
         /// <summary>
-        /// 代码中引用
+        /// 文件夹
         /// </summary>
-        Script,
+        Folder = NormalFolder | LibraryFolder | SpecialFolder,
+        /// <summary>
+        /// 文件
+        /// </summary>
+        Asset = NormalAsset | LibraryAsset | SpecialAsset,
+
+        /// <summary>
+        /// 忽略引用计算
+        /// </summary>
+        IgnoreReference = Library | Special
+
     }
 
     /// <summary>
@@ -77,44 +79,6 @@ namespace MFramework.AssetMonitor
         void Serialize(BinaryWriter writer);
         void Deserialize(BinaryReader reader);
     }
-
-
-    //[Serializable]
-    //internal class FileTreeData
-    //{
-    //    public string Name;
-    //    public string FullPath;
-    //    public bool IsDirectory;
-
-    //    /// <summary>
-    //    /// 文件大小或者文件夹大小
-    //    /// </summary>
-    //    public int Size;
-    //    /// <summary>
-    //    /// 文件数量或者文件夹数量
-    //    /// </summary>
-    //    public int FileCount;
-
-    //    private AssetInfoRecord _assetInfo;
-    //    public AssetInfoRecord AssetInfo
-    //    {
-    //        get
-    //        {
-    //            if (_assetInfo == null)
-    //            {
-    //                AssetMonitorTools.GetRecordByPath(AssetMonitorTools.FormatPath(FullPath), false);
-    //            }
-    //            return _assetInfo;
-    //        }
-    //    }
-
-    //    public FileTreeData(string name, string fullPath, bool isDirectory)
-    //    {
-    //        this.Name = name;
-    //        this.FullPath = fullPath;
-    //        this.IsDirectory = isDirectory;
-    //    }
-    //}
 
     /// <summary>
     /// 资源监控配置类
@@ -140,25 +104,64 @@ namespace MFramework.AssetMonitor
         #region 序列化
 
         /// <summary>
-        /// 是否开启
-        /// 需要序列化
-        /// </summary>
-        internal bool IsOpen { get; set; } = false;
-        /// <summary>
         /// 项目页签固定大小
         /// </summary>
         internal float ProjectFiexdSize { get; set; } = 120;
 
         /// <summary>
-        /// 所有搜索器
+        /// 使用Unity下的资源大小
+        /// 需要序列化
         /// </summary>
-        private readonly List<SearcherInfo> _searcherInfos = new List<SearcherInfo>();
+        internal bool UseUnitySize { get; set; } = true;
 
+        /// <summary>
+        /// 是否显示空引用
+        /// 需要序列化
+        /// </summary>
+        internal bool ShowEmptyReference { get; set; } = false;
+
+        /// <summary>
+        /// 是否在项目文件夹中显示
+        /// 需要序列化
+        /// </summary>
+        internal bool ShowInProject { get; set; } = true;
+
+        /// <summary>
+        /// 是否在项目文件夹中选中
+        /// 需要序列化
+        /// </summary>
+        internal bool SelectInProject { get; set; } = true;
+
+        /// <summary>
+        /// 是否自动展开树
+        /// 需要序列化
+        /// </summary>
+        internal bool AutoExpandedTree { get; set; } = true;
         /// <summary>
         /// 当前所有资源信息
         /// 需要序列化
         /// </summary>
         private readonly List<AssetInfoRecord> _assetRecords = new List<AssetInfoRecord>();
+        /// <summary>
+        /// 所有右键指令
+        /// 需要序列化
+        /// </summary>
+        private readonly List<CommandInfo> _commandInfos = new List<CommandInfo>();
+        /// <summary>
+        /// 所有搜索器
+        /// 需要序列化
+        /// </summary>
+        private readonly List<SearcherInfo> _searcherInfos = new List<SearcherInfo>();
+        /// <summary>
+        /// 所有检测器
+        /// 需要序列化
+        /// </summary>
+        private readonly List<WatcherInfo> _watcherInfos = new List<WatcherInfo>();
+        /// <summary>
+        /// 所有资源验证器
+        /// 需要序列化
+        /// </summary>
+        private readonly List<VerifierInfo> _verifierInfos = new List<VerifierInfo>();
 
         #endregion
 
@@ -180,19 +183,51 @@ namespace MFramework.AssetMonitor
         /// 不序列化
         /// </summary>
         internal readonly Dictionary<string, AssetInfoRecord> PathAssetRecordDict = new Dictionary<string, AssetInfoRecord>();
-
+        /// <summary>
+        /// 右键指令信息字典
+        /// 不序列化
+        /// </summary>
+        internal readonly Dictionary<string, CommandInfo> CommandInfoDict = new Dictionary<string, CommandInfo>();
         /// <summary>
         /// 搜索器信息字典
         /// 不序列化
         /// </summary>
         internal readonly Dictionary<string, SearcherInfo> SearcherInfoDict = new Dictionary<string, SearcherInfo>();
+        /// <summary>
+        /// 检测器信息字典
+        /// 不序列化
+        /// </summary>
+        internal readonly Dictionary<string, WatcherInfo> WatcherInfoDict = new Dictionary<string, WatcherInfo>();
+        /// <summary>
+        /// 验证器信息字典
+        /// 不序列化
+        /// </summary>
+        internal readonly Dictionary<string, VerifierInfo> VerifierInfoDict = new Dictionary<string, VerifierInfo>();
 
+        /// <summary>
+        /// 自定义右键指令类型
+        /// 不序列化
+        /// key: 类型全称 value: Type
+        /// </summary>
+        internal readonly Dictionary<string, Type> CommandTypeDict = new Dictionary<string, Type>();
         /// <summary>
         /// 搜索器类型信息
         /// 不序列化
         /// key: 类型全称 value: Type
         /// </summary>
-        internal readonly Dictionary<string, Type> SearcherTypes = new Dictionary<string, Type>();
+        internal readonly Dictionary<string, Type> SearcherTypeDict = new Dictionary<string, Type>();
+        /// <summary>
+        /// 自定义监视器类型
+        /// 不序列化
+        /// key: 类型全称 value: Type
+        /// </summary>
+        internal readonly Dictionary<string, Type> WatcherTypeDict = new Dictionary<string, Type>();
+        /// <summary>
+        /// 自定义资源校验类型
+        /// 不序列化
+        /// key: 类型全称 value: Type
+        /// </summary>
+        internal readonly Dictionary<string, Type> VerifierTypeDict = new Dictionary<string, Type>();
 
         #endregion
 
@@ -222,31 +257,96 @@ namespace MFramework.AssetMonitor
         /// 添加一个资源记录
         /// </summary>
         /// <param name="record"></param>
-        public void AddRecord(AssetInfoRecord record)
+        internal void AddRecord(AssetInfoRecord record)
         {
             if (!_assetRecords.Contains(record))
                 _assetRecords.Add(record);
             if (!GuidAssetRecordDict.ContainsKey(record.Guid))
                 GuidAssetRecordDict.Add(record.Guid, record);
-            if (!PathAssetRecordDict.ContainsKey(record.FilePath))
-                PathAssetRecordDict.Add(record.FilePath, record);
+            if (!PathAssetRecordDict.ContainsKey(record.AssetPath))
+                PathAssetRecordDict.Add(record.AssetPath, record);
+        }
+
+        /// <summary>
+        /// 删除一个资源记录
+        /// </summary>
+        /// <param name="record"></param>
+        internal void RemoveRecord(AssetInfoRecord record)
+        {
+            if (GuidAssetRecordDict.ContainsKey(record.Guid))
+                GuidAssetRecordDict.Remove(record.Guid);
+            if (PathAssetRecordDict.ContainsKey(record.AssetPath))
+                PathAssetRecordDict.Remove(record.AssetPath);
+            _assetRecords.Remove(record);
+        }
+
+        /// <summary>
+        /// 清空所有记录
+        /// </summary>
+        internal void ClearAllRecords()
+        {
+            _assetRecords.Clear();
+            GuidAssetRecordDict.Clear();
+            PathAssetRecordDict.Clear();
+            Save();
         }
 
         /// <summary>
         /// 添加一个搜索器
         /// </summary>
         /// <param name="info"></param>
-        public void AddSearcher(SearcherInfo info)
+        internal void AddSearcher(SearcherInfo info)
         {
             if (!_searcherInfos.Contains(info))
                 _searcherInfos.Add(info);
+            if (!SearcherInfoDict.ContainsKey(info.TypeName))
+                SearcherInfoDict.Add(info.TypeName, info);
+        }
+
+        /// <summary>
+        /// 添加一个检测器
+        /// </summary>
+        /// <param name="info"></param>
+        internal void AddWatcher(WatcherInfo info)
+        {
+            if (!_watcherInfos.Contains(info))
+                _watcherInfos.Add(info);
+            if (!WatcherInfoDict.ContainsKey(info.TypeName))
+                WatcherInfoDict.Add(info.TypeName, info);
+        }
+
+        /// <summary>
+        /// 添加一个右键指令
+        /// </summary>
+        /// <param name="info"></param>
+        internal void AddCommand(CommandInfo info)
+        {
+            if (!_commandInfos.Contains(info))
+                _commandInfos.Add(info);
+            if (!CommandInfoDict.ContainsKey(info.TypeName))
+                CommandInfoDict.Add(info.TypeName, info);
+        }
+        /// <summary>
+        /// 添加一个资源验证器
+        /// </summary>
+        /// <param name="info"></param>
+        internal void AddVerifier(VerifierInfo info)
+        {
+            if (!_verifierInfos.Contains(info))
+                _verifierInfos.Add(info);
+            if (!VerifierInfoDict.ContainsKey(info.TypeName))
+                VerifierInfoDict.Add(info.TypeName, info);
         }
 
         public void Deserialize(BinaryReader reader)
         {
             reader.ReadString(); // 读取配置版本
-            IsOpen = reader.ReadBoolean(); // 读取是否开启标志
             ProjectFiexdSize = reader.ReadSingle();
+            UseUnitySize = reader.ReadBoolean();
+            ShowInProject = reader.ReadBoolean();
+            ShowEmptyReference = reader.ReadBoolean();
+            SelectInProject = reader.ReadBoolean();
+            AutoExpandedTree = reader.ReadBoolean();
             int count = reader.ReadInt32();
             for (int i = 0; i < count; i++)
             {
@@ -255,31 +355,91 @@ namespace MFramework.AssetMonitor
                 _assetRecords.Add(record);
                 if (!GuidAssetRecordDict.ContainsKey(record.Guid))
                     GuidAssetRecordDict.Add(record.Guid, record);
-                if (!PathAssetRecordDict.ContainsKey(record.FilePath))
-                    PathAssetRecordDict.Add(record.FilePath, record);
+                if (!PathAssetRecordDict.ContainsKey(record.AssetPath))
+                    PathAssetRecordDict.Add(record.AssetPath, record);
             }
 
+            #region 右键菜单
+            //右键菜单
+            count = reader.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                CommandInfo command = new CommandInfo();
+                command.Deserialize(reader);
+                _commandInfos.Add(command);
+                if (!CommandInfoDict.ContainsKey(command.TypeName))
+                    CommandInfoDict.Add(command.TypeName, command);
+            }
+            #endregion
+
+            #region 搜索器
+            //搜索器
             count = reader.ReadInt32();
             for (int i = 0; i < count; i++)
             {
                 SearcherInfo searcher = new SearcherInfo();
                 searcher.Deserialize(reader);
                 _searcherInfos.Add(searcher);
-                if (!SearcherInfoDict.ContainsKey(searcher.SearcherTypeName))
-                    SearcherInfoDict.Add(searcher.SearcherTypeName, searcher);
+                if (!SearcherInfoDict.ContainsKey(searcher.TypeName))
+                    SearcherInfoDict.Add(searcher.TypeName, searcher);
             }
+            #endregion
+
+            #region 观察者
+            //观察者
+            count = reader.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                WatcherInfo watcher = new WatcherInfo();
+                watcher.Deserialize(reader);
+                _watcherInfos.Add(watcher);
+                if (!WatcherInfoDict.ContainsKey(watcher.TypeName))
+                    WatcherInfoDict.Add(watcher.TypeName, watcher);
+            }
+            #endregion
+
+            #region 资源验证
+            //资源验证
+            count = reader.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                VerifierInfo verifier = new VerifierInfo();
+                verifier.Deserialize(reader);
+                _verifierInfos.Add(verifier);
+                if (!VerifierInfoDict.ContainsKey(verifier.TypeName))
+                    VerifierInfoDict.Add(verifier.TypeName, verifier);
+            }
+            #endregion
+
         }
 
         public void Serialize(BinaryWriter writer)
         {
             writer.Write(CONFIG_VERSION); // 版本号
-            writer.Write(IsOpen);
             writer.Write(ProjectFiexdSize);
+            writer.Write(UseUnitySize);
+            writer.Write(ShowInProject);
+            writer.Write(ShowEmptyReference);
+            writer.Write(SelectInProject);
+            writer.Write(AutoExpandedTree);
             writer.Write(_assetRecords.Count);
             foreach (var record in _assetRecords)
                 record.Serialize(writer);
+            //右键菜单
+            writer.Write(_commandInfos.Count);
+            foreach (var commandInfo in _commandInfos)
+                commandInfo.Serialize(writer);
+            //搜索器
             writer.Write(_searcherInfos.Count);
             foreach (var info in _searcherInfos)
+                info.Serialize(writer);
+            //观察者
+            writer.Write(_watcherInfos.Count);
+            foreach (var info in _watcherInfos)
+                info.Serialize(writer);
+            //资源验证
+            writer.Write(_verifierInfos.Count);
+            foreach (var info in _verifierInfos)
                 info.Serialize(writer);
         }
 
@@ -288,7 +448,29 @@ namespace MFramework.AssetMonitor
         /// </summary>
         internal void RefreshConfig()
         {
-            foreach (var item in SearcherTypes)
+
+            #region 右键菜单
+            //搜索器
+            foreach (var item in CommandTypeDict)
+            {
+                if (CommandInfoDict.ContainsKey(item.Key))
+                    continue;
+                CommandInfo.Create(item.Key);
+            }
+            for (int i = _commandInfos.Count - 1; i >= 0; i--)
+            {
+                var item = _commandInfos[i];
+                if (!CommandTypeDict.ContainsKey(item.TypeName))
+                {
+                    CommandInfoDict.Remove(item.TypeName);
+                    _commandInfos.RemoveAt(i);
+                }
+            }
+            #endregion
+
+            #region 搜索器
+            //搜索器
+            foreach (var item in SearcherTypeDict)
             {
                 if (SearcherInfoDict.ContainsKey(item.Key))
                     continue;
@@ -297,15 +479,62 @@ namespace MFramework.AssetMonitor
             for (int i = _searcherInfos.Count - 1; i >= 0; i--)
             {
                 var item = _searcherInfos[i];
-                if (!SearcherTypes.ContainsKey(item.SearcherTypeName))
+                if (!SearcherTypeDict.ContainsKey(item.TypeName))
                 {
+                    SearcherInfoDict.Remove(item.TypeName);
                     _searcherInfos.RemoveAt(i);
-                    continue;
                 }
             }
+            #endregion
 
-            foreach (var item in _assetRecords)
-                item.RefreshTree();
+            #region 观察者
+            //观察者
+            foreach (var item in WatcherTypeDict)
+            {
+                if (WatcherInfoDict.ContainsKey(item.Key))
+                    continue;
+                WatcherInfo info = WatcherInfo.Create(item.Key);
+                for (int j = _assetRecords.Count - 1; j >= 0; j--)
+                    _assetRecords[j].RefreshWatcherRelation(info);
+            }
+            for (int i = _watcherInfos.Count - 1; i >= 0; i--)
+            {
+                WatcherInfo item = _watcherInfos[i];
+                if (!WatcherTypeDict.ContainsKey(item.TypeName))
+                {
+                    WatcherInfoDict.Remove(item.TypeName);
+                    _watcherInfos.RemoveAt(i);
+                    for (int j = _assetRecords.Count - 1; j >= 0; j--)
+                        _assetRecords[j].RemoveWatcherRelation(item);
+                }
+            }
+            #endregion
+
+            #region 资源验证
+            // 资源验证
+            foreach (var item in VerifierTypeDict)
+            {
+                if (VerifierInfoDict.ContainsKey(item.Key))
+                    continue;
+                VerifierInfo info = VerifierInfo.Create(item.Key);
+                for (int j = _assetRecords.Count - 1; j >= 0; j--)
+                    _assetRecords[j].RefreshVerifyResult(info);
+            }
+            for (int i = _verifierInfos.Count - 1; i >= 0; i--)
+            {
+                VerifierInfo item = _verifierInfos[i];
+                if (!VerifierTypeDict.ContainsKey(item.TypeName))
+                {
+                    VerifierInfoDict.Remove(item.TypeName);
+                    _verifierInfos.RemoveAt(i);
+                    for (int j = _assetRecords.Count - 1; j >= 0; j--)
+                        _assetRecords[j].RemoveVerifyResult(item);
+                }
+            }
+            #endregion
+
+            for (int i = _assetRecords.Count - 1; i >= 0; i--)
+                _assetRecords[i].RefreshFileSize();
         }
 
         /// <summary>
@@ -350,16 +579,28 @@ namespace MFramework.AssetMonitor
         }
         private void m_firstInit()
         {
-            IsOpen = false;
             ProjectFiexdSize = 120;
+            UseUnitySize = true;
+            ShowInProject = true;
+            ShowEmptyReference = false;
+            SelectInProject = true;
+            AutoExpandedTree = true;
             _assetRecords.Clear();
+            _commandInfos.Clear();
             _searcherInfos.Clear();
+            _watcherInfos.Clear();
+            _verifierInfos.Clear();
+            CommandInfoDict.Clear();
             SearcherInfoDict.Clear();
+            WatcherInfoDict.Clear();
+            VerifierInfoDict.Clear();
             GuidAssetRecordDict.Clear();
             PathAssetRecordDict.Clear();
 
             Save();
+
         }
+
     }
 
     /// <summary>
@@ -367,6 +608,10 @@ namespace MFramework.AssetMonitor
     /// </summary>
     public sealed class AssetInfoRecord : IEquatable<AssetInfoRecord>, ISerializable
     {
+        private readonly static string[] UnitySizeTypes = new string[]
+        {
+            "Texture2D",
+        };
         /// <summary>
         /// 资源的唯一标识符
         /// 需要序列化
@@ -378,7 +623,7 @@ namespace MFramework.AssetMonitor
         /// 也是唯一的标识符
         /// 需要序列化
         /// </summary>
-        public string FilePath { get; private set; } = "";
+        public string AssetPath { get; private set; } = "";
 
         /// <summary>
         /// 是否处于AB包中
@@ -396,29 +641,42 @@ namespace MFramework.AssetMonitor
         /// 资源类型
         /// 需要序列化
         /// </summary>
-        public AssetKind Kind { get; private set; } = AssetKind.Regular;
+        public AssetKind Kind { get; private set; } = AssetKind.NormalAsset;
 
         /// <summary>
         /// 资源大小
         /// Byte
         /// 需要序列化
         /// </summary>
-        public long Size { get; private set; } = 0;
+        public long DiskSize { get; private set; } = 0;
+
+        /// <summary>
+        /// Unity大小
+        /// 需要序列化
+        /// </summary>
+        public long UnitySize { get; private set; } = 0;
 
         /// <summary>
         /// 获取资源最后修改的哈希值。
         /// 需要序列化
         /// </summary>
-        public long LastHash { get; private set; } = 0;
+        public long LastAssetHash { get; private set; } = 0;
+
+        /// <summary>
+        /// 获取资源Meta文件最后修改的哈希值。
+        /// 需要序列化
+        /// </summary>
+        public long LastMetaHash { get; private set; } = 0;
 
         /// <summary>
         /// 依赖于【此资源】的其它资源的GUID列表。
         /// (关系: 其它资源 -> 此资源)
         /// 需要序列化
         /// </summary>
-        public readonly HashSet<RelationInfo> DependencyRelations = new HashSet<RelationInfo>();
+        public readonly List<RelationInfo> DependencyRelations = new List<RelationInfo>();
         /// <summary>
         /// 依赖的guid缓存
+        /// 不序列化
         /// </summary>
         private readonly HashSet<string> _dependencyGuidCache = new HashSet<string>();
 
@@ -427,18 +685,26 @@ namespace MFramework.AssetMonitor
         /// (关系: 此资源 -> 其它资源)
         /// 需要序列化
         /// </summary>
-        public readonly HashSet<RelationInfo> ReferenceRelations = new HashSet<RelationInfo>();
+        public readonly List<RelationInfo> ReferenceRelations = new List<RelationInfo>();
         /// <summary>
         /// 引用的guid缓存
-        /// </summary>
-        public readonly HashSet<string> _referenceGuidCache = new HashSet<string>();
-
-        private string _fieldName = "";
-        /// <summary>
-        /// 文件名
         /// 不序列化
         /// </summary>
-        public string FileName => _fieldName;
+        private readonly HashSet<string> _referenceGuidCache = new HashSet<string>();
+
+        /// <summary>
+        /// 验证器的结果
+        /// 需要序列化
+        /// </summary>
+        internal readonly List<VerifyResult> VerifyResults = new List<VerifyResult>();
+
+
+        private string _assetName = "";
+        /// <summary>
+        /// 资源名
+        /// 不序列化
+        /// </summary>
+        public string AssetName => _assetName;
 
         private string _parentPath = "";
         /// <summary>
@@ -456,7 +722,12 @@ namespace MFramework.AssetMonitor
         /// 是否是目录
         /// 不序列化
         /// </summary>
-        public bool IsDirectory => Kind != AssetKind.Regular;
+        public bool IsFolder => Kind.IsFolder();
+
+        /// <summary>
+        /// 资源大小
+        /// </summary>
+        public long Size => IsFolder ? DiskSize : AssetMonitorConfig.Instance.UseUnitySize ? (UnitySizeTypes.Contains(AssetType) ? UnitySize : DiskSize) : DiskSize;
 
         /// <summary>
         /// 包含资源数量
@@ -476,7 +747,7 @@ namespace MFramework.AssetMonitor
                 if (IsRoot)
                     return _parent;
                 if (_parent == null)
-                    _parent = AssetMonitorTools.GetRecordByPath(ParentPath);
+                    _parent = AssetMonitorTools.GetRecordByAssetPath(ParentPath, true);
                 return _parent;
             }
         }
@@ -501,15 +772,21 @@ namespace MFramework.AssetMonitor
         /// <param name="filePath"></param>
         /// <param name="kind"></param>
         /// <returns></returns>
-        public static AssetInfoRecord Create(string guid, string filePath, AssetKind kind = AssetKind.Regular)
+        internal static AssetInfoRecord Create(string guid, string assetPath, AssetKind kind = AssetKind.NormalAsset)
         {
             AssetInfoRecord infoRecord = new AssetInfoRecord();
             infoRecord.Guid = guid;
-            infoRecord.FilePath = filePath;
+            infoRecord.AssetPath = assetPath;
             infoRecord.Kind = kind;
-            infoRecord._parentPath = kind != AssetKind.SpecialRegular ? System.IO.Path.GetDirectoryName(filePath) : "";
+
+            infoRecord._parentPath = kind switch
+            {
+                AssetKind.NormalFolder => System.IO.Path.GetDirectoryName(assetPath),
+                AssetKind.NormalAsset => System.IO.Path.GetDirectoryName(assetPath),
+                _ => ""
+            };
             infoRecord.AssetType = AssetMonitorTools.GetAssetTypeByGuid(guid);
-            infoRecord._fieldName = System.IO.Path.GetFileName(filePath);
+            infoRecord._assetName = System.IO.Path.GetFileName(assetPath);
             AssetMonitorConfig.Instance.AddRecord(infoRecord);
             return infoRecord;
         }
@@ -517,101 +794,196 @@ namespace MFramework.AssetMonitor
         /// <summary>
         /// 刷新依赖关系,如果需要的话
         /// </summary>
-        public void UpdateDepIfNeeded()
+        internal void UpdateIfNeeded()
         {
-            if (string.IsNullOrWhiteSpace(FilePath))
+            if (Kind.IsIngoreReference())
+                return;
+            if (string.IsNullOrWhiteSpace(AssetPath))
             {
                 Debug.LogWarning("无法更新依赖, 路径非法");
                 return;
             }
 
+
+            // 更新资源地址
+            string path = AssetMonitorTools.GuidToAssetPath(this.Guid);
+            if (path != AssetPath)
+            {
+                m_clearFileSize();
+                // 资源路径被换, 只用更新路径即可
+                AssetPath = path;
+                _parentPath = Kind switch
+                {
+                    AssetKind.NormalFolder => System.IO.Path.GetDirectoryName(AssetPath),
+                    AssetKind.NormalAsset => System.IO.Path.GetDirectoryName(AssetPath),
+                    _ => ""
+                };
+                _parent = null;
+                return;
+            }
+
+            if (!File.Exists(AssetPath) && !Directory.Exists(AssetPath))
+            {
+                //文件被删除
+                AssetMonitorConfig.Instance.RemoveRecord(this);
+                m_clearRelation();
+                m_clearFileSize();
+                return;
+            }
+
+
             if (_fileInfo == null)
             {
-                if (IsDirectory)
-                    _fileInfo = new DirectoryInfo(FilePath);
+                if (IsFolder)
+                    _fileInfo = new DirectoryInfo(AssetPath);
                 else
-                    _fileInfo = new FileInfo(FilePath);
+                    _fileInfo = new FileInfo(AssetPath);
             }
             else
                 _fileInfo.Refresh();
 
-            if (!_fileInfo.Exists)
-            {
-                Debug.LogWarning($"无法更新依赖, 路径不存在, 路径:{FilePath}");
-                return;
-            }
-
             if (_metaFileInfo == null)
-                _metaFileInfo = new FileInfo(FilePath + ".meta");
+                _metaFileInfo = new FileInfo(AssetPath + ".meta");
             else
                 _metaFileInfo.Refresh();
-            if (!IsDirectory)
-                Size = (long)((FileInfo)_fileInfo).Length;
-            long currentHash = _fileInfo.LastWriteTimeUtc.Ticks;
-            if (LastHash == currentHash)
+            long currentAssetHash = _fileInfo.LastWriteTimeUtc.Ticks;
+            long currentMetaHash = 0;
+            if (_metaFileInfo != null)
+                currentMetaHash = _metaFileInfo.LastWriteTimeUtc.Ticks;
+            if (LastAssetHash == currentAssetHash && LastMetaHash == currentMetaHash)
                 return;
-            if (Kind == AssetKind.SpecialFolder)
-                return;
-            m_refreshDependencies();
-            LastHash = currentHash;
+            bool isFirst = LastAssetHash == 0 && LastMetaHash == 0;
+            LastAssetHash = currentAssetHash;
+            LastMetaHash = currentMetaHash;
+            if (!IsFolder)
+            {
+                DiskSize = ((FileInfo)_fileInfo).Length;
+                UnitySize = AssetMonitorTools.GetAssetUnitySize(this);
+            }
+            m_refreshRelation();
+            if (!isFirst)
+                m_clearFileSize();
+            RefreshFileSize();
         }
 
         /// <summary>
         /// 刷新文件树
         /// </summary>
-        public void RefreshTree()
+        internal void RefreshFileSize()
         {
-            if (IsRoot)
+            if (IsRoot || Kind.IsIngoreReference())
                 return;
             if (Parent != null)
             {
                 Parent.Childs.Add(this);
-                bool shouldUpdateSize = this.Kind == AssetKind.Regular || this.Kind == AssetKind.SpecialRegular;
+                bool shouldUpdateSize = this.Kind == AssetKind.NormalAsset;
                 for (var ancestor = Parent; ancestor != null; ancestor = ancestor.Parent)
                 {
                     ancestor.Count++;
                     if (shouldUpdateSize)
-                        ancestor.Size += this.Size;
+                        ancestor.DiskSize += this.Size;
                 }
             }
             else
-                Debug.LogError($"Parent is null  {ParentPath}");
+                Debug.LogError($"Parent is null  {ParentPath} -- {AssetPath}");
         }
 
-        private void m_refreshDependencies()
+        /// <summary>
+        /// 删除的文件需要清除关系
+        /// </summary>
+        private void m_clearRelation()
+        {
+            foreach (var item in ReferenceRelations)
+            {
+                AssetInfoRecord record = AssetMonitorTools.GetRecordByGuid(item.Guid);
+                if (record == null)
+                    continue;
+                record.DependencyRelations.RemoveAll(a => a.Guid == Guid);
+                record._dependencyGuidCache.Remove(Guid);
+            }
+            this.ReferenceRelations.Clear();
+            this._referenceGuidCache.Clear();
+        }
+
+        /// <summary>
+        /// 删除的文件需要清除关系
+        /// </summary>
+        private void m_clearFileSize()
+        {
+            if (IsRoot || Kind.IsIngoreReference())
+                return;
+            if (Parent != null)
+            {
+                Parent.Childs.Remove(this);
+                bool shouldUpdateSize = this.Kind == AssetKind.NormalAsset;
+                for (var ancestor = Parent; ancestor != null; ancestor = ancestor.Parent)
+                {
+                    ancestor.Count--;
+                    if (shouldUpdateSize)
+                        ancestor.DiskSize -= this.Size;
+                }
+            }
+        }
+
+        private void m_refreshRelation()
         {
             _referenceGuidCache.Clear();
             ReferenceRelations.Clear();
-            string[] dependencies = AssetDatabase.GetDependencies(this.FilePath, false);
+            string[] dependencies = AssetDatabase.GetDependencies(this.AssetPath, false);
             foreach (var dependency in dependencies)
             {
                 var guid = AssetDatabase.AssetPathToGUID(dependency);
                 if (AssetMonitorTools.CheckGuid(guid) && !_referenceGuidCache.Contains(guid))
                 {
                     _referenceGuidCache.Add(guid);
-                    ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = RelationType.Unity });
-                    AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid);
+                    ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = UNITY_RELATION });
+                    AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid, true);
                     if (reference != null && !reference._dependencyGuidCache.Contains(this.Guid))
                     {
                         reference._dependencyGuidCache.Add(this.Guid);
-                        reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = RelationType.Unity });
+                        reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = UNITY_RELATION });
                     }
                 }
             }
-            foreach (var guid in AssetMonitorTools.FindDependenciesByYaml(this.FilePath))
+            foreach (var guid in AssetMonitorTools.FindDependenciesByYaml(this.AssetPath))
             {
                 if (AssetMonitorTools.CheckGuid(guid) && !_referenceGuidCache.Contains(guid))
                 {
                     _referenceGuidCache.Add(guid);
-                    ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = RelationType.Unity });
-                    AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid);
+                    ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = UNITY_RELATION });
+                    AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid, true);
                     if (reference != null && !reference._dependencyGuidCache.Contains(this.Guid))
                     {
                         reference._dependencyGuidCache.Add(this.Guid);
-                        reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = RelationType.Unity });
+                        reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = UNITY_RELATION });
                     }
                 }
             }
+            m_refreshWatcher();
+            m_refreshVerifier();
+        }
+
+        /// <summary>
+        /// 刷新资源验证情况
+        /// </summary>
+        private void m_refreshVerifier()
+        {
+            var verifierInfos = AssetMonitorTools.GetVerifierInfoByAssetPath(AssetPath);
+            if (verifierInfos.Count <= 0)
+                return;
+            foreach (var verifierInfo in verifierInfos)
+                RefreshVerifyResult(verifierInfo);
+        }
+
+        /// <summary>
+        /// 刷新自定义观察者的引用关系
+        /// </summary>
+        private void m_refreshWatcher()
+        {
+            var watcherInfo = AssetMonitorTools.GetWatcherInfoByAssetPath(this.AssetPath);
+            if (watcherInfo == null)
+                return;
+            RefreshWatcherRelation(watcherInfo);
         }
 
         public bool Equals(AssetInfoRecord other)
@@ -643,12 +1015,14 @@ namespace MFramework.AssetMonitor
         public void Deserialize(BinaryReader reader)
         {
             Guid = reader.ReadString();
-            FilePath = reader.ReadString();
+            AssetPath = reader.ReadString();
             AbName = reader.ReadString();
             AssetType = reader.ReadString();
             Kind = (AssetKind)reader.ReadByte();
-            Size = reader.ReadInt64();
-            LastHash = reader.ReadInt64();
+            DiskSize = reader.ReadInt64();
+            UnitySize = reader.ReadInt64();
+            LastAssetHash = reader.ReadInt64();
+            LastMetaHash = reader.ReadInt64();
             int hashCount = reader.ReadInt32();
             DependencyRelations.Clear();
             for (int i = 0; i < hashCount; i++)
@@ -665,26 +1039,165 @@ namespace MFramework.AssetMonitor
                 info.Deserialize(reader);
                 ReferenceRelations.Add(info);
             }
-            if (IsDirectory)
-                Size = 0;
-            _parentPath = Kind != AssetKind.SpecialRegular ? System.IO.Path.GetDirectoryName(FilePath) : "";
-            _fieldName = System.IO.Path.GetFileName(FilePath);
+            hashCount = reader.ReadInt32();
+            VerifyResults.Clear();
+            for (int i = 0; i < hashCount; i++)
+            {
+                VerifyResult info = new VerifyResult();
+                info.Deserialize(reader);
+                info.Guid = this.Guid;
+                VerifyResults.Add(info);
+            }
+
+            //处理一些信息
+            if (IsFolder)
+                DiskSize = 0;
+            _parentPath = Kind switch
+            {
+                AssetKind.NormalFolder => System.IO.Path.GetDirectoryName(AssetPath),
+                AssetKind.NormalAsset => System.IO.Path.GetDirectoryName(AssetPath),
+                _ => ""
+            };
+            _assetName = System.IO.Path.GetFileName(AssetPath);
         }
         public void Serialize(BinaryWriter writer)
         {
             writer.Write(Guid);
-            writer.Write(FilePath);
+            writer.Write(AssetPath);
             writer.Write(AbName);
             writer.Write(AssetType);
             writer.Write((byte)Kind);
-            writer.Write(Size);
-            writer.Write(LastHash);
+            writer.Write(DiskSize);
+            writer.Write(UnitySize);
+            writer.Write(LastAssetHash);
+            writer.Write(LastMetaHash);
+
             writer.Write(DependencyRelations.Count);
-            foreach (var guid in DependencyRelations)
-                guid.Serialize(writer);
+            foreach (var dependency in DependencyRelations)
+                dependency.Serialize(writer);
+
             writer.Write(ReferenceRelations.Count);
-            foreach (var guid in ReferenceRelations)
-                guid.Serialize(writer);
+            foreach (var reference in ReferenceRelations)
+                reference.Serialize(writer);
+
+            writer.Write(VerifyResults.Count);
+            foreach (var verifyResult in VerifyResults)
+                verifyResult.Serialize(writer);
+        }
+
+        /// <summary>
+        /// 刷新一个观察者的结果
+        /// 会先删除旧结果，再添加新的结果
+        /// </summary>
+        /// <param name="verifierInfo"></param>
+        internal void RefreshWatcherRelation(WatcherInfo watcherInfo)
+        {
+            RemoveWatcherRelation(watcherInfo);
+            if (!watcherInfo.IsEnabled)
+                return;
+            var list = watcherInfo.Watcher.OnAssetChanged(this.AssetPath);
+            if (list != null)
+            {
+                string relation = watcherInfo.Watcher.Name;
+                foreach (var item in list)
+                {
+                    var guid = AssetDatabase.AssetPathToGUID(item);
+                    if (AssetMonitorTools.CheckGuid(guid) && !_referenceGuidCache.Contains(guid))
+                    {
+                        _referenceGuidCache.Add(guid);
+                        ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = relation });
+                        AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid, true);
+                        if (reference != null && !reference._dependencyGuidCache.Contains(this.Guid))
+                        {
+                            reference._dependencyGuidCache.Add(this.Guid);
+                            reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = relation });
+                        }
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// 移除该观察者的所有关系
+        /// </summary>
+        /// <param name="watcherInfo"></param>
+        internal void RemoveWatcherRelation(WatcherInfo watcherInfo)
+        {
+            string relation = watcherInfo.Watcher.Name;
+            for (int i = ReferenceRelations.Count - 1; i >= 0; i--)
+            {
+                var relationInfo = ReferenceRelations[i];
+                // 先移除该观察者的旧依赖
+                if (relationInfo.Relation != relation)
+                    continue;
+
+                AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(relationInfo.Guid, true);
+                if (reference != null)
+                {
+                    reference.DependencyRelations.RemoveAll(item => item.Guid == Guid);
+                    reference._dependencyGuidCache.Remove(this.Guid);
+                }
+                _referenceGuidCache.Remove(relationInfo.Guid);
+                ReferenceRelations.RemoveAt(i);
+            }
+        }
+
+        /// <summary>
+        /// 刷新一个验证器的结果
+        /// 会先删除旧结果，再添加新的结果
+        /// </summary>
+        /// <param name="verifierInfo"></param>
+        internal void RefreshVerifyResult(VerifierInfo verifierInfo)
+        {
+            RemoveVerifyResult(verifierInfo);
+            if (!verifierInfo.IsEnabled)
+                return;
+            bool result = verifierInfo.Verifier.Verify(this);
+            VerifyResults.Add(new VerifyResult()
+            {
+                Guid = this.Guid,
+                TypeName = verifierInfo.TypeName,
+                IsValid = result
+            });
+        }
+        /// <summary>
+        /// 移除某个验证器的结果
+        /// </summary>
+        /// <param name="verifierInfo"></param>
+        internal void RemoveVerifyResult(VerifierInfo verifierInfo)
+        {
+            VerifyResults.RemoveAll(item => item.TypeName == verifierInfo.TypeName);
+        }
+    }
+
+    /// <summary>
+    /// 验证结果
+    /// </summary>
+    internal sealed class VerifyResult : ISerializable
+    {
+        /// <summary>
+        /// 资源的guid
+        /// 不序列化
+        /// </summary>
+        public string Guid { get; set; } = "";
+
+        /// <summary>
+        /// 验证器的类型名
+        /// </summary>
+        public string TypeName { get; set; } = "";
+        /// <summary>
+        /// 是否验证成功
+        /// </summary>
+        public bool IsValid { get; set; } = true;
+        public void Deserialize(BinaryReader reader)
+        {
+            TypeName = reader.ReadString();
+            IsValid = reader.ReadBoolean();
+        }
+
+        public void Serialize(BinaryWriter writer)
+        {
+            writer.Write(TypeName);
+            writer.Write(IsValid);
         }
     }
 
@@ -696,24 +1209,23 @@ namespace MFramework.AssetMonitor
         /// <summary>
         /// 资源的guid
         /// </summary>
-        public string Guid = "";
+        public string Guid { get; internal set; } = "";
 
         /// <summary>
         /// 关系类型
-        /// 用来区分 Unity 引用、脚本引用和自定义引用等不同类型的关系。
+        /// 默认为 Unity
         /// </summary>
-        public RelationType Relation = RelationType.Unity;
+        public string Relation { get; internal set; } = "Unity";
 
         public void Deserialize(BinaryReader reader)
         {
             this.Guid = reader.ReadString();
-            this.Relation = (RelationType)reader.ReadByte();
+            this.Relation = reader.ReadString();
         }
-
         public void Serialize(BinaryWriter writer)
         {
             writer.Write(Guid);
-            writer.Write((byte)Relation); // 将枚举转换为字节存储
+            writer.Write(Relation); // 将枚举转换为字节存储
         }
         public bool Equals(RelationInfo other)
         {
@@ -753,8 +1265,8 @@ namespace MFramework.AssetMonitor
         public static bool operator ==(RelationInfo info, string guid)
         {
             // If both are null, or both are same instance, return true.
-            if (System.Object.ReferenceEquals(null, info))
-                return false;
+            if (System.Object.ReferenceEquals(info, guid))
+                return true;
             if (System.Object.ReferenceEquals(null, info))
                 return false;
             return info.Guid == guid;
@@ -774,9 +1286,19 @@ namespace MFramework.AssetMonitor
     }
 
     /// <summary>
+    /// 拓展相关
+    /// </summary>
+    internal interface IConfigExtension
+    {
+        bool IsEnabled { get; set; }
+        string GetDisplayName();
+        string GetDescription();
+    }
+
+    /// <summary>
     /// 搜索器信息
     /// </summary>
-    internal class SearcherInfo : ISerializable
+    internal class SearcherInfo : ISerializable, IConfigExtension
     {
 
         #region 序列化
@@ -785,12 +1307,12 @@ namespace MFramework.AssetMonitor
         /// 搜索器类全名
         /// 需要序列化
         /// </summary>
-        public string SearcherTypeName { get; private set; } = "";
+        public string TypeName { get; private set; } = "";
         /// <summary>
         /// 搜索器是否启用
         /// 需要序列化
         /// </summary>
-        public bool IsEnabled { get; private set; } = true;
+        public bool IsEnabled { get; set; } = true;
 
         #endregion
 
@@ -806,13 +1328,35 @@ namespace MFramework.AssetMonitor
             {
                 if (_searcher == null)
                 {
-                    if (AssetMonitorConfig.Instance.SearcherTypes.TryGetValue(SearcherTypeName, out Type type))
+                    if (AssetMonitorConfig.Instance.SearcherTypeDict.TryGetValue(TypeName, out Type type))
                         _searcher = (IAssetMonitorSearcher)Activator.CreateInstance(type);
                 }
                 return _searcher;
             }
         }
 
+
+        public string GetDisplayName()
+        {
+            return Searcher?.Name;
+        }
+
+        public string GetDescription()
+        {
+            return Searcher?.Description;
+        }
+
+        public void Deserialize(BinaryReader reader)
+        {
+            TypeName = reader.ReadString();
+            IsEnabled = reader.ReadBoolean();
+        }
+
+        public void Serialize(BinaryWriter writer)
+        {
+            writer.Write(TypeName);
+            writer.Write(IsEnabled);
+        }
 
         /// <summary>
         /// 创建搜索器
@@ -822,304 +1366,263 @@ namespace MFramework.AssetMonitor
         public static SearcherInfo Create(string typeName)
         {
             SearcherInfo info = new SearcherInfo();
-            info.SearcherTypeName = typeName;
+            info.TypeName = typeName;
             AssetMonitorConfig.Instance.AddSearcher(info);
             return info;
         }
+    }
 
+    /// <summary>
+    /// 右键指令信息
+    /// </summary>
+    internal class CommandInfo : ISerializable, IConfigExtension
+    {
+        #region 序列化
 
+        /// <summary>
+        /// 右键指令类全名
+        /// 需要序列化
+        /// </summary>
+        public string TypeName { get; private set; } = "";
+        /// <summary>
+        /// 右键指令是否启用
+        /// 需要序列化
+        /// </summary>
+        public bool IsEnabled { get; set; } = true;
+
+        #endregion
+
+        private IAssetMonitorCommand _command;
+        /// <summary>
+        /// 搜索器对象
+        /// 不序列化
+        /// </summary>
+        public IAssetMonitorCommand Command
+        {
+            get
+            {
+                if (_command == null)
+                {
+                    if (AssetMonitorConfig.Instance.CommandTypeDict.TryGetValue(TypeName, out Type type))
+                        _command = (IAssetMonitorCommand)Activator.CreateInstance(type);
+                }
+                return _command;
+            }
+        }
+
+        /// <summary>
+        /// 创建右键指令
+        /// </summary>
+        /// <param name="typeName"></param>
+        /// <returns></returns>
+        public static CommandInfo Create(string typeName)
+        {
+            CommandInfo info = new CommandInfo();
+            info.TypeName = typeName;
+            AssetMonitorConfig.Instance.AddCommand(info);
+            return info;
+        }
         public void Deserialize(BinaryReader reader)
         {
-            SearcherTypeName = reader.ReadString();
+            TypeName = reader.ReadString();
             IsEnabled = reader.ReadBoolean();
         }
 
         public void Serialize(BinaryWriter writer)
         {
-            writer.Write(SearcherTypeName);
+            writer.Write(TypeName);
             writer.Write(IsEnabled);
+        }
+
+        public string GetDisplayName()
+        {
+            return Command?.Name;
+        }
+
+        public string GetDescription()
+        {
+            return Command?.Description;
         }
     }
 
-    ///// <summary>
-    ///// 资源监控信息类，用于记录和管理 Unity 项目中资源的元数据。
-    ///// 实现了 IEquatable<AssetMonitorInfo> 接口以支持对象间的相等性比较。
-    ///// </summary>
-    //[Serializable]
-    //internal class AssetMonitorInfo : IEquatable<AssetMonitorInfo>, ISerializable
-    //{
-    //    /// <summary>
-    //    /// 获取资源的唯一标识符（GUID）。
-    //    /// </summary>
-    //    public string GUID { get; private set; }
+    /// <summary>
+    /// 检测器观察者信息
+    /// </summary>
+    internal class WatcherInfo : ISerializable, IConfigExtension
+    {
 
-    //    /// <summary>
-    //    /// 获取资源在项目中的完整路径。
-    //    /// </summary>
-    //    public string Path { get; private set; }
+        #region 序列化
 
-    //    /// <summary>
-    //    /// 获取资源的类型（如常规资源、设置类资源、包资源等）。
-    //    /// </summary>
-    //    public AssetKind Kind { get; private set; }
+        /// <summary>
+        /// 观察者类全名
+        /// 需要序列化
+        /// </summary>
+        public string TypeName { get; private set; } = "";
+        /// <summary>
+        /// 观察者是否启用
+        /// 需要序列化
+        /// </summary>
+        public bool IsEnabled { get; set; } = true;
 
-    //    /// <summary>
-    //    /// 如果资源是设置类资源，则获取其具体类型（如音频管理器、输入管理器等）。
-    //    /// </summary>
-    //    public AssetSettingsKind SettingsKind { get; private set; }
-
-    //    /// <summary>
-    //    /// 获取资源的大小（单位：字节）。
-    //    /// </summary>
-    //    public long Size { get; private set; }
-
-    //    /// <summary>
-    //    /// 获取资源最后修改的哈希值。
-    //    /// </summary>
-    //    public ulong LastHash { get; private set; } = 0;
-
-    //    /// <summary>
-    //    /// 获取资源是否丢失。
-    //    /// </summary>
-    //    public bool IsMissing { get; private set; } = false;
-
-    //    /// <summary>
-    //    /// 此资源所依赖的【其它资源】的GUID列表。
-    //    /// (关系: 此资源 -> 其它资源)
-    //    /// </summary>
-    //    public readonly HashSet<string> DependenciesGUIDs = new HashSet<string>();
-
-    //    /// <summary>
-    //    /// 依赖于【此资源】的其它资源的GUID列表。
-    //    /// (关系: 其它资源 -> 此资源)
-    //    /// </summary>
-    //    public readonly HashSet<string> ReferencesGUIDs = new HashSet<string>();
+        #endregion
 
 
-    //    private FileInfo _fileInfo;
-    //    private FileInfo _metaFileInfo;
+        private IAssetMonitorWatcher _watcher;
+        /// <summary>
+        /// 搜索器对象
+        /// 不序列化
+        /// </summary>
+        internal IAssetMonitorWatcher Watcher
+        {
+            get
+            {
+                if (_watcher == null)
+                {
+                    if (AssetMonitorConfig.Instance.WatcherTypeDict.TryGetValue(TypeName, out Type type))
+                    {
+                        _watcher = (IAssetMonitorWatcher)Activator.CreateInstance(type);
+                        IsExtension = _watcher.WatchPath.TrimStart().StartsWith("*");
+                        if (!IsExtension)
+                            goto End;
+                        Extensions = _watcher.WatchPath.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.TrimStart('*').ToLower()).ToArray();
+                    }
+                }
+            End: return _watcher;
+            }
+        }
+        /// <summary>
+        /// 是否是针对拓展名
+        /// </summary>
+        public bool IsExtension { get; private set; }
 
-    //    internal static AssetMonitorInfo Create(RawAssetMonitorInfo raw)
-    //    {
-    //        if (string.IsNullOrEmpty(raw.guid))
-    //        {
-    //            Debug.LogError("GUID非法, 无法创建资源监控信息, 资源地址:" + raw.path);
-    //            return null;
-    //        }
-    //        AssetMonitorInfo info = new AssetMonitorInfo()
-    //        {
-    //            GUID = raw.guid,
-    //            Path = raw.path,
-    //            IsMissing = !string.IsNullOrWhiteSpace(raw.path),
-    //            Kind = raw.kind
-    //        };
-    //        return info;
-    //    }
+        /// <summary>
+        /// 当前的所有拓展名
+        /// </summary>
+        public string[] Extensions { get; private set; } = AssetMonitorTools.StringEmpty;
 
-    //    /// <summary>
-    //    /// 创建内部资源的监控信息
-    //    /// </summary>
-    //    /// <param name="path"></param>
-    //    /// <param name="guid"></param>
-    //    /// <returns></returns>
-    //    internal static AssetMonitorInfo Create(string guid, string path)
-    //    {
-    //        AssetMonitorInfo info = new AssetMonitorInfo()
-    //        {
-    //            GUID = guid,
-    //            Path = path,
-    //            IsMissing = !string.IsNullOrWhiteSpace(path),
-    //            Kind = AssetKind.FromEmbeddedPackage,
-    //        };
-    //        return info;
-    //    }
+        /// <summary>
+        /// 创建观察者
+        /// </summary>
+        /// <param name="typeName"></param>
+        /// <returns></returns>
+        public static WatcherInfo Create(string typeName)
+        {
+            WatcherInfo info = new WatcherInfo();
+            info.TypeName = typeName;
+            AssetMonitorConfig.Instance.AddWatcher(info);
+            return info;
+        }
 
-    //    /// <summary>
-    //    /// 跟新依赖
-    //    /// </summary>
-    //    internal void UpdateIfNeeded()
-    //    {
-    //        if (string.IsNullOrWhiteSpace(Path))
-    //        {
-    //            Debug.LogWarning("无法更新依赖, 路径非法");
-    //            return;
-    //        }
-    //        if (_fileInfo == null)
-    //            _fileInfo = new FileInfo(Path);
-    //        else
-    //            _fileInfo.Refresh();
+        public void Deserialize(BinaryReader reader)
+        {
+            TypeName = reader.ReadString();
+            IsEnabled = reader.ReadBoolean();
+        }
 
-    //        if (!_fileInfo.Exists)
-    //        {
-    //            Debug.LogWarning($"无法更新依赖, 路径不存在, 路径:{Path}");
-    //            return;
-    //        }
+        public void Serialize(BinaryWriter writer)
+        {
+            writer.Write(TypeName);
+            writer.Write(IsEnabled);
+        }
 
-    //        ulong currentHash = 0;
+        public string GetDisplayName()
+        {
+            return Watcher?.Name;
+        }
 
-    //        if (_metaFileInfo == null)
-    //            _metaFileInfo = new FileInfo(Path + ".meta");
-    //        else
-    //            _metaFileInfo.Refresh();
+        public string GetDescription()
+        {
+            return Watcher?.Description;
+        }
+    }
 
-    //        currentHash = (ulong)_fileInfo.LastWriteTimeUtc.Ticks;
+    /// <summary>
+    /// 资源校验者信息
+    /// </summary>
+    internal class VerifierInfo : ISerializable, IConfigExtension
+    {
+        #region 序列化
 
-    //        Size = _fileInfo.Length;
+        /// <summary>
+        /// 资源校验者类全名
+        /// 需要序列化
+        /// </summary>
+        public string TypeName { get; private set; } = "";
+        /// <summary>
+        /// 资源校验者是否启用
+        /// 需要序列化
+        /// </summary>
+        public bool IsEnabled { get; set; } = true;
 
-    //        if (LastHash == currentHash)
-    //        {
-    //            // return;
-    //            //for (var i = dependenciesGUIDs.Length - 1; i > -1; i--)
-    //            //{
-    //            //    var guid = dependenciesGUIDs[i];
-    //            //    var path = AssetDatabase.GUIDToAssetPath(guid);
-    //            //    path = CSPathTools.EnforceSlashes(path);
-    //            //    if (!string.IsNullOrEmpty(path) && File.Exists(path)) continue;
+        #endregion
 
-    //            //    ArrayUtility.RemoveAt(ref dependenciesGUIDs, i);
-    //            //    foreach (var referenceInfo in assetReferencesInfo)
-    //            //    {
-    //            //        if (referenceInfo.assetInfo.GUID != guid) continue;
+        private IAssetMonitorVerifier _verifier;
+        /// <summary>
+        /// 搜索器对象
+        /// 不序列化
+        /// </summary>
+        public IAssetMonitorVerifier Verifier
+        {
+            get
+            {
+                if (_verifier == null)
+                {
+                    if (AssetMonitorConfig.Instance.VerifierTypeDict.TryGetValue(TypeName, out Type type))
+                    {
+                        _verifier = (IAssetMonitorVerifier)Activator.CreateInstance(type);
+                        IsExtension = _verifier.VerifyPath.TrimStart().StartsWith("*");
+                        if (!IsExtension)
+                            goto End;
+                        Extensions = _verifier.VerifyPath.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.TrimStart('*').ToLower()).ToArray();
+                    }
+                }
+            End: return _verifier;
+            }
+        }
 
-    //            //        ArrayUtility.Remove(ref assetReferencesInfo, referenceInfo);
-    //            //        break;
-    //            //    }
-    //            //}
+        /// <summary>
+        /// 是否是针对拓展名
+        /// </summary>
+        public bool IsExtension { get; private set; }
 
-    //            //if (!needToRebuildReferences) return;
-    //        }
+        /// <summary>
+        /// 当前的所有拓展名
+        /// </summary>
+        public string[] Extensions { get; private set; } = AssetMonitorTools.StringEmpty;
 
-    //        //foreach (var referenceInfo in assetReferencesInfo)
-    //        //{
-    //        //    foreach (var info in referenceInfo.assetInfo.referencedAtInfoList)
-    //        //    {
-    //        //        if (!info.assetInfo.Equals(this)) continue;
+        /// <summary>
+        /// 创建右键指令
+        /// </summary>
+        /// <param name="typeName"></param>
+        /// <returns></returns>
+        public static VerifierInfo Create(string typeName)
+        {
+            VerifierInfo info = new VerifierInfo();
+            info.TypeName = typeName;
+            AssetMonitorConfig.Instance.AddVerifier(info);
+            return info;
+        }
 
-    //        //        ArrayUtility.Remove(ref referenceInfo.assetInfo.referencedAtInfoList, info);
-    //        //        break;
-    //        //    }
-    //        //}
+        public void Deserialize(BinaryReader reader)
+        {
+            TypeName = reader.ReadString();
+            IsEnabled = reader.ReadBoolean();
+        }
 
-    //        LastHash = currentHash;
-    //        //needToRebuildReferences = true;
+        public void Serialize(BinaryWriter writer)
+        {
+            writer.Write(TypeName);
+            writer.Write(IsEnabled);
+        }
 
-    //        //assetReferencesInfo = new AssetReferenceInfo[0];
-    //        FindDependencies();
-    //    }
+        public string GetDisplayName()
+        {
+            return Verifier?.Name;
+        }
 
-
-    //    public void Deserialize(BinaryReader reader)
-    //    {
-    //        GUID = reader.ReadString(); //  GUID
-    //        Path = reader.ReadString(); //  路径
-    //        Kind = (AssetKind)reader.ReadByte(); //  资源类型
-    //        SettingsKind = (AssetSettingsKind)reader.ReadByte(); //  设置类型
-    //        LastHash = reader.ReadUInt64();
-    //        Size = reader.ReadInt64(); //  大小
-    //        int count = reader.ReadInt32(); //  依赖数量
-    //        for (int i = 0; i < count; i++)
-    //            DependenciesGUIDs.Add(reader.ReadString());
-    //        count = reader.ReadInt32(); //  引用数量
-    //        for (int i = 0; i < count; i++)
-    //            ReferencesGUIDs.Add(reader.ReadString());
-    //    }
-
-    //    public void Serialize(BinaryWriter writer)
-    //    {
-    //        writer.Write(GUID);
-    //        writer.Write(Path);
-    //        writer.Write((byte)Kind);
-    //        writer.Write((byte)SettingsKind);
-    //        writer.Write(LastHash);
-    //        writer.Write(Size);
-    //        writer.Write(DependenciesGUIDs.Count); //  依赖数量
-    //        foreach (var item in DependenciesGUIDs)
-    //            writer.Write(item);
-    //        writer.Write(ReferencesGUIDs.Count);
-    //        foreach (var item in ReferencesGUIDs)
-    //            writer.Write(item);
-    //    }
-
-    //    public bool Equals(AssetMonitorInfo other)
-    //    {
-    //        if (ReferenceEquals(null, other))
-    //            return false;
-
-    //        if (ReferenceEquals(this, other))
-    //            return true;
-
-    //        return GUID == other.GUID;
-    //    }
-
-    //    public override bool Equals(object obj)
-    //    {
-    //        if (ReferenceEquals(null, obj))
-    //            return false;
-
-    //        if (ReferenceEquals(this, obj))
-    //            return true;
-
-    //        if (obj.GetType() != GetType())
-    //            return false;
-
-    //        return Equals((AssetMonitorInfo)obj);
-    //    }
-    //    public override int GetHashCode()
-    //    {
-    //        return GUID != null ? GUID.GetHashCode() : 0;
-    //    }
-
-
-    //    private void FindDependencies()
-    //    {
-    //        DependenciesGUIDs.Clear();
-    //        if (this.Kind != AssetKind.Settings)
-    //        {
-    //            var dependencies = AssetDatabase.GetDependencies(this.Path, false);
-
-    //            foreach (var path in dependencies)
-    //            {
-    //                var guid = AssetDatabase.AssetPathToGUID(path);
-    //                if (AssetMonitorTools.CheckGuid(guid) && !DependenciesGUIDs.Contains(guid))
-    //                {
-    //                    DependenciesGUIDs.Add(guid);
-    //                    AssetMonitorInfo reference = AssetMonitorTools.GetAssetMonitorInfoByGuid(guid);
-    //                    if (reference != null && !reference.ReferencesGUIDs.Contains(GUID))
-    //                        reference.ReferencesGUIDs.Add(GUID);
-    //                }
-    //            }
-    //        }
-    //        foreach (var guid in AssetMonitorTools.FindDependenciesByYaml(this.Path))
-    //        {
-    //            if (AssetMonitorTools.CheckGuid(guid) && !DependenciesGUIDs.Contains(guid))
-    //            {
-    //                DependenciesGUIDs.Add(guid);
-    //                AssetMonitorInfo reference = AssetMonitorTools.GetAssetMonitorInfoByGuid(guid);
-    //                if (reference != null && !reference.ReferencesGUIDs.Contains(GUID))
-    //                    reference.ReferencesGUIDs.Add(GUID);
-    //            }
-    //        }
-    //    }
-
-    //    public static string[] GetAssetsGUIDs(string[] paths)
-    //    {
-    //        if (paths == null || paths.Length == 0)
-    //        {
-    //            return null;
-    //        }
-
-    //        var guids = new List<string>(paths.Length);
-    //        foreach (var path in paths)
-    //        {
-    //            var guid = AssetDatabase.AssetPathToGUID(path);
-    //            if (!string.IsNullOrEmpty(guid))
-    //            {
-    //                guids.Add(guid);
-    //            }
-    //        }
-
-    //        return guids.ToArray();
-    //    }
-    //}
-
+        public string GetDescription()
+        {
+            return Verifier?.Description;
+        }
+    }
 }

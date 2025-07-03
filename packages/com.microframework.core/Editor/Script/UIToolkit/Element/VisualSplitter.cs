@@ -147,7 +147,7 @@ namespace MFramework.Core.Editor
         public FlexDirection direction { get => this.style.flexDirection.value; set => this.style.flexDirection = value; }
         public VisualSplitter()
         {
-            this.AddStyleSheet("UIToolkit\\Uss\\VisualSplitter");
+            this.AddStyleSheet("UIToolkit\\Element\\VisualSplitter");
             AddToClassList(ussClassName);
             this.AddManipulator(new SplitManipulator());
         }

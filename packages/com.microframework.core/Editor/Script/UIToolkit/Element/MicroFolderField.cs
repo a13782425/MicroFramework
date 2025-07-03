@@ -10,7 +10,7 @@ namespace MFramework.Core.Editor
     /// </summary>
     public class MicroFolderField : VisualElement
     {
-        private const string STYLE_SHEET = "UIToolkit\\Uss\\MicroFolderField";
+        private const string STYLE_SHEET = "UIToolkit\\Element\\MicroFolderField";
         private const string SELECT_FOLDER_LABEL = "选择文件夹";
         private const string INVALID_PATH_MESSAGE = "路径必须为 Assets 或 Packages 相对路径（例：Assets/YourFolder 或 Packages/YourPackage）";
 

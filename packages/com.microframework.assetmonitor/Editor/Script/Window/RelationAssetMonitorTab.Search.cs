@@ -1,19 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine.UIElements;
-using static Codice.CM.Common.Serialization.PacketFileReader;
-using static MFramework.AssetMonitor.ProjectAssetMonitorTab;
 
 namespace MFramework.AssetMonitor
 {
-    partial class ProjectAssetMonitorTab
+    partial class RelationAssetMonitorTab
     {
         /// 搜索文件树数据
-        private List<TreeViewItemData<AssetInfoRecord>> _filteredItems = new List<TreeViewItemData<AssetInfoRecord>>();
+        private List<MTreeViewItemData> _filteredItems = new List<MTreeViewItemData>();
         private List<SearchPart> _searchParts = new List<SearchPart>();
         /// <summary>
         /// 搜索文件树
@@ -35,7 +28,7 @@ namespace MFramework.AssetMonitor
                 foreach (var rootItem in _allItems)
                 {
                     var filteredItem = m_searchFolderTreeItem(rootItem);
-                    if (filteredItem.data != null)
+                    if (filteredItem != null)
                     {
                         _filteredItems.Add(filteredItem);
                     }
@@ -50,20 +43,20 @@ namespace MFramework.AssetMonitor
             }
         }
 
-        private TreeViewItemData<AssetInfoRecord> m_searchFolderTreeItem(TreeViewItemData<AssetInfoRecord> item)
+        private MTreeViewItemData m_searchFolderTreeItem(MTreeViewItemData item)
         {
-            AssetInfoRecord record = item.data;
+            AssetInfoRecord record = item.GetData<AssetInfoRecord>();
             bool matchesCurrent = m_matchesSearchCriteria(record);
 
-            List<TreeViewItemData<AssetInfoRecord>> filteredChildren = new List<TreeViewItemData<AssetInfoRecord>>();
+            List<MTreeViewItemData> filteredChildren = new List<MTreeViewItemData>();
 
             // 递归过滤子项
-            if (item.hasChildren)
+            if (item.HasChildren)
             {
-                foreach (var child in item.children)
+                foreach (var child in item.Children)
                 {
                     var filteredChild = m_searchFolderTreeItem(child);
-                    if (filteredChild.data != null)
+                    if (filteredChild != null)
                     {
                         filteredChildren.Add(filteredChild);
                     }
@@ -73,7 +66,7 @@ namespace MFramework.AssetMonitor
             // 如果当前项匹配或有匹配的子项，则包含此项
             if (matchesCurrent || filteredChildren.Count > 0)
             {
-                return new TreeViewItemData<AssetInfoRecord>(item.id, record, filteredChildren);
+                return new MTreeViewItemData(record, filteredChildren);
             }
 
             return default;

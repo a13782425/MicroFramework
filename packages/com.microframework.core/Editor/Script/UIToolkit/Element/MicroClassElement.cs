@@ -49,7 +49,8 @@ namespace MFramework.Core.Editor
         /// </summary>
         const string DEFAULT_ASSEMBLY = "Assembly-CSharp";
 
-        const string k_UssPath = "UIToolkit/Uss/MicroClassElement";
+        private const string STYLE_SHEET = "UIToolkit\\Element\\MicroClassElement";
+
         const string k_BassUssClassName = "micro-class-element";
         const string k_AssemblyDpFieldUssClassName = k_BassUssClassName + "__assembly-dp-field";
         const string k_ClassDpFieldUssClassName = k_BassUssClassName + "__class-dp-field";
@@ -93,7 +94,7 @@ namespace MFramework.Core.Editor
 
         protected MicroClassElement(string label, VisualElement visualInput) : base(label, visualInput)
         {
-            this.AddStyleSheet(k_UssPath);
+            this.AddStyleSheet(STYLE_SHEET);
         }
         /// <summary>
         /// 构造函数

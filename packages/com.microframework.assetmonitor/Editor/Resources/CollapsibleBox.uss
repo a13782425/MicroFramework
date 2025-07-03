@@ -1,0 +1,40 @@
+﻿/* 可折叠 Box 基础样式 */
+.collapsible-box { 
+    background-color: rgba(40, 40, 40, 0.302);
+    border-width: 1px;
+    border-color: rgba(74, 74, 74, 1);
+    border-radius: 3px;
+    margin: 2px;
+	padding: 2px;
+    overflow: hidden;
+}
+
+/* 使用 Foldout 的样式 */
+
+.collapsible-box__foldout {
+    background-color: rgba(70, 96, 124, 0.5);
+    margin: 4px;
+	padding: 2px;
+}
+.collapsible-box__foldout .unity-label {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgba(255,255,255,1);
+    margin-left: 2px;
+}
+
+/* 内容区域 */
+.collapsible-box__container {
+    padding: 0px 4px 0px 4px;
+    display: none;
+    overflow: hidden;
+    scale: 0;
+    transform-origin: left top;
+    transition: scale 0.2s ease-in-out;
+}
+
+.collapsible-box.expanded .collapsible-box__container {
+    padding: 2px 4px 2px 4px;
+    display: flex;
+    scale: 1;
+}
