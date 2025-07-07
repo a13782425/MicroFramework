@@ -8,16 +8,8 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
+using MFramework.Core;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge001")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge002")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge003")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge004")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge005")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge006")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge007")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge008")]
-[assembly: InternalsVisibleTo("MFramework.Core.Editor.Bridge009")]
 
 namespace MFramework.Core.Editor
 {
@@ -32,13 +24,13 @@ namespace MFramework.Core.Editor
         /// </summary>
         internal readonly static string[] RequirePackages = new string[] { "com.unity.nuget.newtonsoft-json" };
         /// <summary>
-        /// 编辑器资源位置
-        /// </summary>
-        internal readonly static string EDITOR_RESOURCE_PATH = "__MicroEditor";
-        /// <summary>
         /// 编辑器根目录
         /// </summary>
-        internal readonly static string EDITOR_ROOT_PATH = "";
+        internal const string EDITOR_ROOT_PATH = "Packages/com.microframework.core/Editor";
+        /// <summary>
+        /// 编辑器资源位置
+        /// </summary>
+        internal const string EDITOR_ASSET_PATH = EDITOR_ROOT_PATH + "/Script/__MicroEditor";
 
         /// <summary>
         /// 默认配置文件名称
@@ -68,53 +60,52 @@ namespace MFramework.Core.Editor
         internal static IMicroLogger logger;
         public static event Action onUpdate;
 
-        private static SerializedObject _editorSerializedObject;
-        /// <summary>
-        /// 编辑器配置序列化对象
-        /// </summary>
-        internal static SerializedObject EditorSerializedObject
-        {
-            get
-            {
-                if (_editorSerializedObject == null)
-                {
-                    _editorSerializedObject = new SerializedObject(MicroEditorConfig.Instance);
-                }
-                if (_editorSerializedObject.targetObject != MicroEditorConfig.Instance)
-                {
-                    _editorSerializedObject = new SerializedObject(MicroEditorConfig.Instance);
-                }
-                return _editorSerializedObject;
-            }
-        }
-        private static SerializedObject _runtimeSerializedObject;
-        /// <summary>
-        /// 运行时配置序列化对象
-        /// </summary>
-        internal static SerializedObject RuntimeSerializedObject
-        {
-            get
-            {
-                if (_runtimeSerializedObject == null)
-                {
-                    _runtimeSerializedObject = new SerializedObject(MicroRuntimeConfig.CurrentConfig);
-                }
-                if (_runtimeSerializedObject.targetObject != MicroRuntimeConfig.CurrentConfig)
-                {
-                    _runtimeSerializedObject = new SerializedObject(MicroRuntimeConfig.CurrentConfig);
-                }
-                return _runtimeSerializedObject;
-            }
-        }
-
+        //private static SerializedObject _editorSerializedObject;
         ///// <summary>
-        ///// 自定义绘制器字典
+        ///// 编辑器配置序列化对象
         ///// </summary>
-        //internal readonly static Dictionary<Type, ICustomDrawer> CustomDrawers = new Dictionary<Type, ICustomDrawer>();
+        //internal static SerializedObject EditorSerializedObject
+        //{
+        //    get
+        //    {
+        //        if (_editorSerializedObject == null)
+        //        {
+        //            _editorSerializedObject = new SerializedObject(MicroEditorConfig.Instance);
+        //        }
+        //        if (_editorSerializedObject.targetObject != MicroEditorConfig.Instance)
+        //        {
+        //            _editorSerializedObject = new SerializedObject(MicroEditorConfig.Instance);
+        //        }
+        //        return _editorSerializedObject;
+        //    }
+        //}
+        //private static SerializedObject _runtimeSerializedObject;
+        ///// <summary>
+        ///// 运行时配置序列化对象
+        ///// </summary>
+        //internal static SerializedObject RuntimeSerializedObject
+        //{
+        //    get
+        //    {
+        //        if (_runtimeSerializedObject == null)
+        //        {
+        //            _runtimeSerializedObject = new SerializedObject(MicroRuntimeConfig.CurrentConfig);
+        //        }
+        //        if (_runtimeSerializedObject.targetObject != MicroRuntimeConfig.CurrentConfig)
+        //        {
+        //            _runtimeSerializedObject = new SerializedObject(MicroRuntimeConfig.CurrentConfig);
+        //        }
+        //        return _runtimeSerializedObject;
+        //    }
+        //}
+
+        /// <summary>
+        /// 自定义绘制器字典
+        /// </summary>
+        internal readonly static Dictionary<Type, ICustomDrawer> CustomDrawers = new Dictionary<Type, ICustomDrawer>();
 
         static MicroContextEditor()
         {
-            EDITOR_ROOT_PATH = GetScriptPath(typeof(MicroContextEditor));
             UnityOnLoad();
         }
 
@@ -128,11 +119,11 @@ namespace MFramework.Core.Editor
             EditorApplication.playModeStateChanged -= m_playModeStateChanged;
             EditorApplication.playModeStateChanged += m_playModeStateChanged;
             m_initMethodInfo();
-            //m_initCustomDrawers();
+            m_initCustomDrawer();
             m_checkPackage();
             m_initConfig();
         }
-        
+
         /// <summary>
         /// 获取某个脚本的目录
         /// <para>确保脚本名和类名一致</para>
@@ -201,7 +192,7 @@ namespace MFramework.Core.Editor
         /// <returns></returns>
         public static T LoadRes<T>(string path) where T : UnityEngine.Object
         {
-            return Resources.Load<T>(Path.Combine(EDITOR_RESOURCE_PATH, path));
+            return AssetDatabase.LoadAssetAtPath<T>(Path.Combine(EDITOR_ASSET_PATH, path));
         }
 
         /// <summary>
@@ -288,7 +279,6 @@ namespace MFramework.Core.Editor
             }
         }
 
-
         /// <summary>
         /// 获取运行时配置
         /// </summary>
@@ -300,6 +290,8 @@ namespace MFramework.Core.Editor
             if (runtimeConfig == null)
             {
                 runtimeConfig = ScriptableObject.CreateInstance<MicroRuntimeConfig>();
+                if (!Directory.Exists(Path.GetDirectoryName(filePath)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
                 AssetDatabase.CreateAsset(runtimeConfig, filePath);
                 AssetDatabase.SetMainObject(runtimeConfig, filePath);
                 AssetDatabase.Refresh();
@@ -409,12 +401,41 @@ namespace MFramework.Core.Editor
         }
 
         /// <summary>
+        /// 初始化自定义绘制器
+        /// </summary>
+        private static void m_initCustomDrawer()
+        {
+            foreach (Type drawerType in TypeCache.GetTypesDerivedFrom<ICustomDrawer>())
+            {
+                if (drawerType.IsAbstract || !drawerType.IsClass || drawerType.IsGenericType)
+                    continue;
+                if (drawerType.GetCustomAttribute<IgnoreAttribute>() != null)
+                    return;
+                CustomDrawerAttribute customDrawer = drawerType.GetCustomAttribute<CustomDrawerAttribute>();
+                if (customDrawer == null)
+                    continue;
+                Type targetType = customDrawer.TargetType;
+                if (targetType == null)
+                    continue;
+                if (!CustomDrawers.ContainsKey(targetType))
+                {
+                    CustomDrawers.Add(targetType, (ICustomDrawer)Activator.CreateInstance(drawerType));
+                    continue;
+                }
+                if (drawerType.Assembly == typeof(MicroContextEditor).Assembly)
+                    continue;
+                CustomDrawers.Add(targetType, (ICustomDrawer)Activator.CreateInstance(drawerType));
+                logger.LogWarning($"类型:{targetType.Name} 的绘制器已经存在于类型:{CustomDrawers[targetType].GetType().Name}中，但被{drawerType.Name}覆盖。");
+            }
+        }
+        
+        /// <summary>
         /// 初始化编辑器变化和Update的方法
         /// </summary>
         private static void m_initMethodInfo()
         {
-            MicroContextEditor.EditorUpdateDic.Clear();
-            MicroContextEditor.PlayModeChangedDic.Clear();
+            EditorUpdateDic.Clear();
+            PlayModeChangedDic.Clear();
             foreach (var item in TypeCache.GetMethodsWithAttribute<PlayModeChangedAttribute>())
             {
                 if (!item.IsStatic)
@@ -424,7 +445,7 @@ namespace MFramework.Core.Editor
                     continue;
                 if (@params[0].ParameterType != typeof(PlayModeStateChange))
                     continue;
-                MicroContextEditor.PlayModeChangedDic.Add((Action<PlayModeStateChange>)item.CreateDelegate(typeof(Action<PlayModeStateChange>)));
+                PlayModeChangedDic.Add((Action<PlayModeStateChange>)item.CreateDelegate(typeof(Action<PlayModeStateChange>)));
             }
             foreach (var item in TypeCache.GetMethodsWithAttribute<EditorUpdateAttribute>())
             {
@@ -433,7 +454,7 @@ namespace MFramework.Core.Editor
                 var @params = item.GetParameters();
                 if (@params.Length != 0)
                     continue;
-                MicroContextEditor.EditorUpdateDic.Add((Action)item.CreateDelegate(typeof(Action)));
+                EditorUpdateDic.Add((Action)item.CreateDelegate(typeof(Action)));
             }
         }
     }

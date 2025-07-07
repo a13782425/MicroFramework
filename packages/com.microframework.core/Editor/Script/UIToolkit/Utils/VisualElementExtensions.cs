@@ -25,8 +25,6 @@ namespace MFramework.Core.Editor
         private static MethodInfo s_getPropertyMethod;
         private static MethodInfo s_hasPropertyMethod;
 
-        private static readonly Type s_FoldoutType = typeof(Foldout);
-
         static VisualElementExtensions()
         {
             s_pseudoStateProp = typeof(VisualElement).GetProperty("pseudoStates", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -113,34 +111,33 @@ namespace MFramework.Core.Editor
             return (bool)s_hasPropertyMethod.Invoke(ve, new object[] { key });
         }
 
-        internal static SerializedProperty GetSerializedProperty(this IMicroEditorConfig config)
-        {
-            if (config == null)
-                return null;
-            SerializedProperty configsProp = MicroContextEditor.EditorSerializedObject.FindProperty("Configs");
-            foreach (SerializedProperty configProp in configsProp)
-            {
-                if (configProp.managedReferenceValue == config)
-                {
-                    return configProp;
-                }
-            }
-            return null;
-        }
-        internal static SerializedProperty GetSerializedProperty(this IMicroRuntimeConfig config)
-        {
-            if (config == null)
-                return null;
-            SerializedProperty configsProp = MicroContextEditor.RuntimeSerializedObject.FindProperty("Configs");
-            foreach (SerializedProperty configProp in configsProp)
-            {
-                if (configProp.managedReferenceValue == config)
-                {
-                    return configProp;
-                }
-            }
-            return null;
-        }
-
+        //internal static SerializedProperty GetSerializedProperty(this IMicroEditorConfig config)
+        //{
+        //    if (config == null)
+        //        return null;
+        //    SerializedProperty configsProp = MicroContextEditor.EditorSerializedObject.FindProperty("Configs");
+        //    foreach (SerializedProperty configProp in configsProp)
+        //    {
+        //        if (configProp.managedReferenceValue == config)
+        //        {
+        //            return configProp;
+        //        }
+        //    }
+        //    return null;
+        //}
+        //internal static SerializedProperty GetSerializedProperty(this IMicroRuntimeConfig config)
+        //{
+        //    if (config == null)
+        //        return null;
+        //    SerializedProperty configsProp = MicroContextEditor.RuntimeSerializedObject.FindProperty("Configs");
+        //    foreach (SerializedProperty configProp in configsProp)
+        //    {
+        //        if (configProp.managedReferenceValue == config)
+        //        {
+        //            return configProp;
+        //        }
+        //    }
+        //    return null;
+        //}
     }
 }

@@ -35,9 +35,9 @@ namespace MFramework.AssetMonitor
         /// <summary>
         /// 文件监控有变化
         /// </summary>
-        /// <param name="filePath">基于AssetDatabase可读的路径,变化的文件,如果监控的文件夹会调用多次</param>
+        /// <param name="record">资源文件的记录(克隆值)</param>
         /// <returns>当前文件包含的资源,以AssetDatabase可读的路径为准</returns>
-        IEnumerable<string> OnAssetChanged(string filePath);
+        IEnumerable<string> OnAssetChanged(AssetInfoRecord record);
 
     }
 }

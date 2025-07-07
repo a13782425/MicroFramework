@@ -182,7 +182,7 @@ namespace MFramework.AssetMonitor
                 {
                     if (!item.Value.IsEnabled)
                         continue;
-                    if (item.Value.Command.OnFilter(this._record.Guid, CommandType.Verify))
+                    if (item.Value.Command.OnFilter(this._record, CommandType.Verify))
                         _commands.Add(item.Value);
                 }
                 _commands.Sort((a, b) => a.Command.Priority.CompareTo(b.Command.Priority));
@@ -196,7 +196,9 @@ namespace MFramework.AssetMonitor
                 CommandInfo info = action.userData as CommandInfo;
                 if (info == null || _record == null)
                     return;
-                info.Command.OnExecute(_record.Guid, CommandType.Verify);
+                var clone = _record.Clone() as AssetInfoRecord;
+                info.Command.OnExecute(clone, CommandType.Verify);
+                AssetInfoRecord.PoolReturn(clone);
             }
             private void m_onRefClick()
             {

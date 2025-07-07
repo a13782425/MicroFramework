@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -11,6 +12,7 @@ namespace MFramework.Core.Editor
 {
     partial class VisualElementExtensions
     {
+
         //private static VisualElement DrawUI(FieldInfo fieldInfo, Func<object> getValue, Action<object> setValue)
         //{
         //    Type fieldType = fieldInfo.FieldType;
@@ -172,53 +174,33 @@ namespace MFramework.Core.Editor
         //        return container;
         //    return element;
         //}
-        public static string GetDisplayName(this object obj)
-        {
-            if (obj == null)
-                return "";
-            var attr = obj.GetType().GetCustomAttribute<DisplayNameAttribute>();
-            if (attr != null)
-                return attr.DisplayName;
-            else
-                return obj.GetType().Name;
-        }
-        public static string GetDisplayName(this FieldInfo fieldInfo)
-        {
-            if (fieldInfo == null)
-                return "";
-            var attr = fieldInfo.GetCustomAttribute<DisplayNameAttribute>();
-            if (attr != null)
-                return attr.DisplayName;
-            else
-                return fieldInfo.Name;
 
-        }
 
-        public static VisualElement DrawUI(this IMicroEditorConfig config)
-        {
-            if (config == null)
-                return null;
-            SerializedProperty property = config.GetSerializedProperty();
-            if (property == null)
-                return null;
-            string displayName = config.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
-            PropertyField field = new PropertyField(property, displayName ?? config.GetType().Name);
-            field.Bind(property.serializedObject);
-            return field;
-        }
+        //public static VisualElement DrawUI(this IMicroEditorConfig config)
+        //{
+        //    if (config == null)
+        //        return null;
+        //    SerializedProperty property = config.GetSerializedProperty();
+        //    if (property == null)
+        //        return null;
+        //    string displayName = config.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
+        //    PropertyField field = new PropertyField(property, displayName ?? config.GetType().Name);
+        //    field.Bind(property.serializedObject);
+        //    return field;
+        //}
 
-        public static VisualElement DrawUI(this IMicroRuntimeConfig config)
-        {
-            if (config == null)
-                return null;
-            SerializedProperty property = config.GetSerializedProperty();
-            if (property == null)
-                return null;
-            string displayName = config.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
-            PropertyField field = new PropertyField(property, displayName ?? config.GetType().Name);
-            field.Bind(property.serializedObject);
-            return field;
-        }
+        //public static VisualElement DrawUI(this IMicroRuntimeConfig config)
+        //{
+        //    if (config == null)
+        //        return null;
+        //    SerializedProperty property = config.GetSerializedProperty();
+        //    if (property == null)
+        //        return null;
+        //    string displayName = config.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
+        //    PropertyField field = new PropertyField(property, displayName ?? config.GetType().Name);
+        //    field.Bind(property.serializedObject);
+        //    return field;
+        //}
 
         /// <summary>
         /// 设置一个 VisualElement 的显示状态。
@@ -234,7 +216,6 @@ namespace MFramework.Core.Editor
             else
                 visualElement.style.display = DisplayStyle.None;
         }
-
 
         /// <summary> Get an element's layout rect in local space.</summary>
         /// <param name="ve">The VisualElement.</param>

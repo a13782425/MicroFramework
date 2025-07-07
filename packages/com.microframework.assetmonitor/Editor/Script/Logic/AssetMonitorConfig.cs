@@ -606,7 +606,7 @@ namespace MFramework.AssetMonitor
     /// <summary>
     /// 资源记录
     /// </summary>
-    public sealed class AssetInfoRecord : IEquatable<AssetInfoRecord>, ISerializable
+    public sealed class AssetInfoRecord : IEquatable<AssetInfoRecord>, ISerializable, ICloneable
     {
         private readonly static string[] UnitySizeTypes = new string[]
         {
@@ -716,7 +716,7 @@ namespace MFramework.AssetMonitor
         /// 是否是根节点
         /// 不序列化
         /// </summary>
-        public bool IsRoot => string.IsNullOrWhiteSpace(ParentPath);
+        public bool IsRoot => string.IsNullOrWhiteSpace(ParentPath) || _isClone;
 
         /// <summary>
         /// 是否是目录
@@ -735,7 +735,13 @@ namespace MFramework.AssetMonitor
         /// </summary>
         public int Count { get; private set; } = 0;
 
-        private AssetInfoRecord _parent;
+        /// <summary>
+        /// 是否是克隆
+        /// 不序列化
+        /// </summary>
+        private bool _isClone = false;
+
+        private AssetInfoRecord _parent = null;
         /// <summary>
         /// 父节点
         /// 不序列化
@@ -746,9 +752,17 @@ namespace MFramework.AssetMonitor
             {
                 if (IsRoot)
                     return _parent;
-                if (_parent == null)
+                if (_parent == null && !_isClone)
                     _parent = AssetMonitorTools.GetRecordByAssetPath(ParentPath, true);
                 return _parent;
+            }
+            internal set
+            {
+                _parent = value;
+                if (value == null)
+                    _parentPath = "";
+                else
+                    _parentPath = value.AssetPath;
             }
         }
         /// <summary>
@@ -796,6 +810,8 @@ namespace MFramework.AssetMonitor
         /// </summary>
         internal void UpdateIfNeeded()
         {
+            if (_isClone)
+                return;
             if (Kind.IsIngoreReference())
                 return;
             if (string.IsNullOrWhiteSpace(AssetPath))
@@ -871,6 +887,8 @@ namespace MFramework.AssetMonitor
         /// </summary>
         internal void RefreshFileSize()
         {
+            if (_isClone)
+                return;
             if (IsRoot || Kind.IsIngoreReference())
                 return;
             if (Parent != null)
@@ -893,6 +911,8 @@ namespace MFramework.AssetMonitor
         /// </summary>
         private void m_clearRelation()
         {
+            if (_isClone)
+                return;
             foreach (var item in ReferenceRelations)
             {
                 AssetInfoRecord record = AssetMonitorTools.GetRecordByGuid(item.Guid);
@@ -910,6 +930,8 @@ namespace MFramework.AssetMonitor
         /// </summary>
         private void m_clearFileSize()
         {
+            if (_isClone)
+                return;
             if (IsRoot || Kind.IsIngoreReference())
                 return;
             if (Parent != null)
@@ -927,21 +949,26 @@ namespace MFramework.AssetMonitor
 
         private void m_refreshRelation()
         {
+            if (_isClone)
+                return;
             _referenceGuidCache.Clear();
             ReferenceRelations.Clear();
-            string[] dependencies = AssetDatabase.GetDependencies(this.AssetPath, false);
-            foreach (var dependency in dependencies)
+            string[] references = AssetDatabase.GetDependencies(this.AssetPath, false);
+            foreach (var reference in references)
             {
-                var guid = AssetDatabase.AssetPathToGUID(dependency);
+                var guid = AssetDatabase.AssetPathToGUID(reference);
                 if (AssetMonitorTools.CheckGuid(guid) && !_referenceGuidCache.Contains(guid))
                 {
                     _referenceGuidCache.Add(guid);
                     ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = UNITY_RELATION });
-                    AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid, true);
-                    if (reference != null && !reference._dependencyGuidCache.Contains(this.Guid))
+                    AssetInfoRecord dependency = AssetMonitorTools.GetRecordByGuid(guid, true);
+                    if (dependency == null)
+                        continue;
+                    string[] dependencies = AssetDatabase.GetDependencies(dependency.AssetPath, false);
+                    if (dependencies.Contains(this.Guid) && !dependency._dependencyGuidCache.Contains(this.Guid))
                     {
-                        reference._dependencyGuidCache.Add(this.Guid);
-                        reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = UNITY_RELATION });
+                        dependency._dependencyGuidCache.Add(this.Guid);
+                        dependency.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = UNITY_RELATION });
                     }
                 }
             }
@@ -951,11 +978,14 @@ namespace MFramework.AssetMonitor
                 {
                     _referenceGuidCache.Add(guid);
                     ReferenceRelations.Add(new RelationInfo() { Guid = guid, Relation = UNITY_RELATION });
-                    AssetInfoRecord reference = AssetMonitorTools.GetRecordByGuid(guid, true);
-                    if (reference != null && !reference._dependencyGuidCache.Contains(this.Guid))
+                    AssetInfoRecord dependency = AssetMonitorTools.GetRecordByGuid(guid, true);
+                    if (dependency == null)
+                        continue;
+                    string[] dependencies = AssetDatabase.GetDependencies(dependency.AssetPath, false);
+                    if (dependencies.Contains(this.Guid) && !dependency._dependencyGuidCache.Contains(this.Guid))
                     {
-                        reference._dependencyGuidCache.Add(this.Guid);
-                        reference.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = UNITY_RELATION });
+                        dependency._dependencyGuidCache.Add(this.Guid);
+                        dependency.DependencyRelations.Add(new RelationInfo() { Guid = this.Guid, Relation = UNITY_RELATION });
                     }
                 }
             }
@@ -968,6 +998,8 @@ namespace MFramework.AssetMonitor
         /// </summary>
         private void m_refreshVerifier()
         {
+            if (_isClone)
+                return;
             var verifierInfos = AssetMonitorTools.GetVerifierInfoByAssetPath(AssetPath);
             if (verifierInfos.Count <= 0)
                 return;
@@ -980,6 +1012,8 @@ namespace MFramework.AssetMonitor
         /// </summary>
         private void m_refreshWatcher()
         {
+            if (_isClone)
+                return;
             var watcherInfo = AssetMonitorTools.GetWatcherInfoByAssetPath(this.AssetPath);
             if (watcherInfo == null)
                 return;
@@ -1029,6 +1063,7 @@ namespace MFramework.AssetMonitor
             {
                 RelationInfo info = new RelationInfo();
                 info.Deserialize(reader);
+                _dependencyGuidCache.Add(info.Guid);
                 DependencyRelations.Add(info);
             }
             hashCount = reader.ReadInt32();
@@ -1037,6 +1072,7 @@ namespace MFramework.AssetMonitor
             {
                 RelationInfo info = new RelationInfo();
                 info.Deserialize(reader);
+                _referenceGuidCache.Add(info.Guid);
                 ReferenceRelations.Add(info);
             }
             hashCount = reader.ReadInt32();
@@ -1092,10 +1128,14 @@ namespace MFramework.AssetMonitor
         /// <param name="verifierInfo"></param>
         internal void RefreshWatcherRelation(WatcherInfo watcherInfo)
         {
+            if (_isClone)
+                return;
             RemoveWatcherRelation(watcherInfo);
             if (!watcherInfo.IsEnabled)
                 return;
-            var list = watcherInfo.Watcher.OnAssetChanged(this.AssetPath);
+            var clone = (AssetInfoRecord)this.Clone();
+            var list = watcherInfo.Watcher.OnAssetChanged(clone);
+            PoolReturn(clone);
             if (list != null)
             {
                 string relation = watcherInfo.Watcher.Name;
@@ -1122,6 +1162,8 @@ namespace MFramework.AssetMonitor
         /// <param name="watcherInfo"></param>
         internal void RemoveWatcherRelation(WatcherInfo watcherInfo)
         {
+            if (_isClone)
+                return;
             string relation = watcherInfo.Watcher.Name;
             for (int i = ReferenceRelations.Count - 1; i >= 0; i--)
             {
@@ -1148,10 +1190,14 @@ namespace MFramework.AssetMonitor
         /// <param name="verifierInfo"></param>
         internal void RefreshVerifyResult(VerifierInfo verifierInfo)
         {
+            if (_isClone)
+                return;
             RemoveVerifyResult(verifierInfo);
             if (!verifierInfo.IsEnabled)
                 return;
-            bool result = verifierInfo.Verifier.Verify(this);
+            var clone = (AssetInfoRecord)this.Clone();
+            bool result = verifierInfo.Verifier.Verify(clone);
+            PoolReturn(clone);
             VerifyResults.Add(new VerifyResult()
             {
                 Guid = this.Guid,
@@ -1165,8 +1211,73 @@ namespace MFramework.AssetMonitor
         /// <param name="verifierInfo"></param>
         internal void RemoveVerifyResult(VerifierInfo verifierInfo)
         {
+            if (_isClone)
+                return;
             VerifyResults.RemoveAll(item => item.TypeName == verifierInfo.TypeName);
         }
+
+        public object Clone()
+        {
+            using MemoryStream memoryStream = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(memoryStream);
+            this.Serialize(writer);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using BinaryReader reader = new BinaryReader(memoryStream);
+            var assetInfoRecord = PoolGet();
+            assetInfoRecord._isClone = true;
+            assetInfoRecord.Deserialize(reader);
+            return assetInfoRecord;
+        }
+
+
+        #region pool
+
+        private static readonly Queue<AssetInfoRecord> _pool = new Queue<AssetInfoRecord>();
+
+        /// <summary>
+        /// 通过对象池中获取一个AssetInfoRecord对象,但他是克隆对象
+        /// </summary>
+        /// <returns></returns>
+        internal static AssetInfoRecord PoolGet()
+        {
+            var record = _pool.Count > 0 ? _pool.Dequeue() : new AssetInfoRecord();
+            record._isClone = true;
+            return record;
+        }
+        /// <summary>
+        /// 归还一个AssetInfoRecord对象
+        /// </summary>
+        /// <param name="record"></param>
+        internal static void PoolReturn(AssetInfoRecord record)
+        {
+            if (record == null)
+                return;
+            record._isClone = true;
+            record.Guid = "";
+            record.AssetPath = "";
+            record.AbName = "";
+            record.AssetType = "";
+            record.Kind = AssetKind.NormalAsset;
+            record.DiskSize = 0;
+            record.UnitySize = 0;
+            record.LastAssetHash = 0;
+            record.LastMetaHash = 0;
+            record.DependencyRelations.Clear();
+            record._dependencyGuidCache.Clear();
+            record.ReferenceRelations.Clear();
+            record._referenceGuidCache.Clear();
+            record.VerifyResults.Clear();
+            record._assetName = "";
+            record._parentPath = "";
+            record._parent = null;
+            foreach (var item in record.Childs)
+            {
+                PoolReturn(item);
+            }
+            record.Childs.Clear();
+            _pool.Enqueue(record);
+        }
+        #endregion
     }
 
     /// <summary>

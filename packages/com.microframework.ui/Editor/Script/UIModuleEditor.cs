@@ -180,25 +180,79 @@ namespace MFramework.UI.Editor
             {
                 if (item.ComName.StartsWith(UIEditorConfig.WIDGET_HEAD))
                 {
-                    genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.AddWidget<{item.ComType}>(this.transform.Find(\"{item.Path}\").gameObject);");
+                    genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.AddWidget<{item.ComType}>(this.Transform.Find(\"{item.Path}\").gameObject);");
                 }
                 else
                 {
                     switch (item.ComType)
                     {
                         case string str when str == typeof(GameObject).Name:
-                            genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.transform.Find(\"{item.Path}\").gameObject;");
+                            genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.Transform.Find(\"{item.Path}\").gameObject;");
                             break;
                         case string str when str == typeof(Transform).Name:
-                            genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.transform.Find(\"{item.Path}\");");
+                            genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.Transform.Find(\"{item.Path}\");");
                             break;
                         default:
-                            genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.transform.Find(\"{item.Path}\").GetComponent<{item.ComType}>();");
+                            genString.AppendLine($"{s_getTab(3)}this.{item.ComName} = this.Transform.Find(\"{item.Path}\").GetComponent<{item.ComType}>();");
                             break;
                     }
                 }
             }
             genString.AppendLine($"{s_getTab(2)}}}");
+
+            #region 索引器
+
+            genString.AppendLine($"{s_getTab(2)}public System.Object this[string elementName] => elementName switch");
+            genString.AppendLine($"{s_getTab(2)}{{");
+            foreach (var item in viewDto.Components)
+                genString.AppendLine($"{s_getTab(3)}\"{item.ComName}\" => this.{item.ComName},");
+            genString.AppendLine($"{s_getTab(3)}_ => throw new System.NullReferenceException($\"{viewDto.ViewName}: {{elementName}} not found!\"),");
+            genString.AppendLine($"{s_getTab(2)}}};");
+
+            //genString.AppendLine($"{s_getTab(2)}public System.Object this[string elementName]");
+            //genString.AppendLine($"{s_getTab(2)}{{");
+            //genString.AppendLine($"{s_getTab(3)}get");
+            //genString.AppendLine($"{s_getTab(3)}{{");
+            //genString.AppendLine($"{s_getTab(4)}switch (elementName)");
+            //genString.AppendLine($"{s_getTab(4)}{{");
+            //foreach (var item in viewDto.Components)
+            //{
+            //    genString.AppendLine($"{s_getTab(5)}case \"{item.ComName}\":");
+            //    genString.AppendLine($"{s_getTab(6)}return this.{item.ComName};");
+            //}
+            //genString.AppendLine($"{s_getTab(5)}default:");
+            //genString.AppendLine($"{s_getTab(6)}throw new System.NullReferenceException($\"{viewDto.ViewName}: {{elementName}} not found!\");");
+            //genString.AppendLine($"{s_getTab(4)}}}");
+            //genString.AppendLine($"{s_getTab(3)}}}");
+            //genString.AppendLine($"{s_getTab(2)}}}");
+
+            #endregion
+
+            #region 泛型方法
+
+            genString.AppendLine($"{s_getTab(2)}public T GetElement<T>(string elementName) where T : class => elementName switch");
+            genString.AppendLine($"{s_getTab(2)}{{");
+            foreach (var item in viewDto.Components)
+                genString.AppendLine($"{s_getTab(3)}\"{item.ComName}\" => this.{item.ComName} as T,");
+            genString.AppendLine($"{s_getTab(3)}_ => throw new System.NullReferenceException($\"{viewDto.ViewName}: {{elementName}} not found!\"),");
+            genString.AppendLine($"{s_getTab(2)}}};");
+
+            //genString.AppendLine($"{s_getTab(2)}public T GetElement<T>(string elementName) where T : class");
+            //genString.AppendLine($"{s_getTab(2)}{{");
+            //genString.AppendLine($"{s_getTab(3)}switch (elementName)");
+            //genString.AppendLine($"{s_getTab(3)}{{");
+            //foreach (var item in viewDto.Components)
+            //{
+            //    genString.AppendLine($"{s_getTab(4)}case \"{item.ComName}\":");
+            //    genString.AppendLine($"{s_getTab(5)}return this.{item.ComName} as T;");
+            //}
+            //genString.AppendLine($"{s_getTab(4)}default:");
+            //genString.AppendLine($"{s_getTab(5)}throw new System.NullReferenceException($\"{viewDto.ViewName}: {{elementName}} not found!\");");
+            //genString.AppendLine($"{s_getTab(3)}}}");
+            //genString.AppendLine($"{s_getTab(2)}}}");
+
+            #endregion
+
             genString.AppendLine($"{s_getTab(1)}}}");
             viewDto.ViewGenCode = genString.ToString();
         }
@@ -481,6 +535,41 @@ namespace MFramework.UI.Editor
             if (!Directory.Exists(s_widgetVMScriptPath))
             {
                 Directory.CreateDirectory(s_widgetVMScriptPath);
+            }
+        }
+
+        [InitializeOnLoadMethod]
+        private static void InitTag()
+        {
+            // Open tag manager
+            SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+            // Tags Property
+            SerializedProperty tagsProp = tagManager.FindProperty("tags");
+
+            //Debug.Log("TagsPorp Size:" + tagsProp.arraySize);
+            List<string> tags = new List<string>();
+            for (int i = 0; i < tagsProp.arraySize; i++)
+            {
+                tags.Add(tagsProp.GetArrayElementAtIndex(i).stringValue);
+            }
+
+            if (tags.Contains(UIEditorConfig.TAG_NAME))
+                return;
+            tags.Add(UIEditorConfig.TAG_NAME);
+            tagsProp.ClearArray();
+
+            tagManager.ApplyModifiedProperties();
+
+
+            for (int i = 0; i < tags.Count; i++)
+            {
+                // Insert new array element
+                tagsProp.InsertArrayElementAtIndex(i);
+                SerializedProperty sp = tagsProp.GetArrayElementAtIndex(i);
+                // Set array element to tagName
+                sp.stringValue = tags[i];
+
+                tagManager.ApplyModifiedProperties();
             }
         }
 

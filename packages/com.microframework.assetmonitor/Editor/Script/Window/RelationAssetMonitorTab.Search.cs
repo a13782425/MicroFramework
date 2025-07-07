@@ -6,7 +6,7 @@ namespace MFramework.AssetMonitor
     partial class RelationAssetMonitorTab
     {
         /// 搜索文件树数据
-        private List<MTreeViewItemData> _filteredItems = new List<MTreeViewItemData>();
+        private List<MTreeItemData> _filteredItems = new List<MTreeItemData>();
         private List<SearchPart> _searchParts = new List<SearchPart>();
         /// <summary>
         /// 搜索文件树
@@ -43,12 +43,12 @@ namespace MFramework.AssetMonitor
             }
         }
 
-        private MTreeViewItemData m_searchFolderTreeItem(MTreeViewItemData item)
+        private MTreeItemData m_searchFolderTreeItem(MTreeItemData item)
         {
             AssetInfoRecord record = item.GetData<AssetInfoRecord>();
             bool matchesCurrent = m_matchesSearchCriteria(record);
 
-            List<MTreeViewItemData> filteredChildren = new List<MTreeViewItemData>();
+            List<MTreeItemData> filteredChildren = new List<MTreeItemData>();
 
             // 递归过滤子项
             if (item.HasChildren)
@@ -66,7 +66,7 @@ namespace MFramework.AssetMonitor
             // 如果当前项匹配或有匹配的子项，则包含此项
             if (matchesCurrent || filteredChildren.Count > 0)
             {
-                return new MTreeViewItemData(record, filteredChildren);
+                return new MTreeItemData(record, filteredChildren);
             }
 
             return default;

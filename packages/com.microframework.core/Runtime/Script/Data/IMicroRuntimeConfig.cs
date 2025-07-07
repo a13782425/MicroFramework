@@ -7,6 +7,13 @@ namespace MFramework.Core
     /// </summary>
     public interface IMicroRuntimeConfig : IConstructor
     {
+        /// <summary>
+        /// 初始化
+        /// </summary>
+        void Init() { }
+        /// <summary>
+        /// 保存
+        /// </summary>
         void Save() => MicroRuntimeConfig.CurrentConfig?.Save();
     }
 }

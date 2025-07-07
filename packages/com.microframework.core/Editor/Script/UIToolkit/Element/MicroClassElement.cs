@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static MFramework.Core.Editor.ClassAnalyze;
 
 namespace MFramework.Core.Editor
 {
@@ -49,7 +51,7 @@ namespace MFramework.Core.Editor
         /// </summary>
         const string DEFAULT_ASSEMBLY = "Assembly-CSharp";
 
-        private const string STYLE_SHEET = "UIToolkit\\Element\\MicroClassElement";
+        private const string STYLE_SHEET = "UIToolkit/Element/MicroClassElement.uss";
 
         const string k_BassUssClassName = "micro-class-element";
         const string k_AssemblyDpFieldUssClassName = k_BassUssClassName + "__assembly-dp-field";
@@ -158,8 +160,19 @@ namespace MFramework.Core.Editor
         {
             if (_serializer == null)
                 return;
-            _serializer.AssemblyName = item.value;
-            _serializer.TypeName = item.displayName;
+            Assembly assembly = Assembly.Load(item.value);
+            if (assembly == null)
+            {
+                _serializer.AssemblyName = item.value;
+                _serializer.TypeName = item.displayName;
+            }
+            var type = assembly.GetType(item.displayName);
+            if (type == null)
+            {
+                _serializer.AssemblyName = item.value;
+                _serializer.TypeName = item.displayName;
+            }
+            _serializer.CurrentType = type;
         }
 
         private MicroDropdownContent _dropDownField_getContent()

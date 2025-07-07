@@ -15,7 +15,7 @@ namespace MFramework.AssetMonitor
     /// <summary>
     /// 资源监控工具类
     /// </summary>
-    internal static class AssetMonitorTools
+    public static class AssetMonitorTools
     {
 
         /// <summary>
@@ -24,18 +24,18 @@ namespace MFramework.AssetMonitor
         private static MethodInfo GetTexture2DUnitySize;
 
         // 空字符串数组
-        internal readonly static string[] StringEmpty = new string[0];
+        internal static readonly string[] StringEmpty = new string[0];
 
         /// <summary>
         /// 一些特殊文件路径
         /// </summary>
-        private readonly static string[] s_specialFiles = new string[] {
+        private static readonly string[] s_specialFiles = new string[] {
             "Resources/unity_builtin_extra",
             "Library/unity default resources",
             "Library/unity editor resources",
         };
 
-        private readonly static string[] s_ignoreInitFolder = new string[]
+        private static readonly string[] s_ignoreInitFolder = new string[]
         {
             "Library",
             "Temp",
@@ -43,11 +43,11 @@ namespace MFramework.AssetMonitor
             "UserSettings"
         };
 
-        private readonly static Vector2 ButtonSize = new Vector2(30f, 16f);                   //按钮大小
-        private readonly static Color RefBtnColor = new Color(0, 0.75f, 0, 0.5f);               //引用按钮颜色
-        private readonly static Color DepBtnColor = new Color(0.75f, 0.5f, 0, 0.5f);         //被引用按钮颜色
+        private static readonly Vector2 ButtonSize = new Vector2(30f, 16f);                   //按钮大小
+        private static readonly Color RefBtnColor = new Color(0, 0.75f, 0, 0.5f);               //引用按钮颜色
+        private static readonly Color DepBtnColor = new Color(0.75f, 0.5f, 0, 0.5f);         //被引用按钮颜色
 
-        private readonly static List<VerifierInfo> s_verifierInfoList = new List<VerifierInfo>(); //验证器信息缓存列表
+        private static readonly List<VerifierInfo> s_verifierInfoList = new List<VerifierInfo>(); //验证器信息缓存列表
 
         #region InitializeOnLoad
 
@@ -231,41 +231,46 @@ namespace MFramework.AssetMonitor
         /// </summary>
         /// <param name="count"></param>
         /// <returns></returns>
-        public static string FormatRefCount(int count) => count > 99 ? "99+" : count.ToString();
+        internal static string FormatRefCount(int count) => count > 99 ? "99+" : count.ToString();
 
         /// <summary>
         /// 格式化字节大小
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static string FormatSize(long bytes) => EditorUtility.FormatBytes(bytes);
-
+        internal static string FormatSize(long bytes) => EditorUtility.FormatBytes(bytes);
+        /// <summary>
+        /// 是否是文件夹
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        internal static bool IsFolder(string path) => !File.Exists(path);
         /// <summary>
         /// 是否是文件夹
         /// </summary>
         /// <param name="kind"></param>
         /// <returns></returns>
-        public static bool IsFolder(this AssetKind kind) => (AssetKind.Folder & kind) != AssetKind.None;
+        internal static bool IsFolder(this AssetKind kind) => (AssetKind.Folder & kind) != AssetKind.None;
         /// <summary>
         /// 是否是资源
         /// </summary>
         /// <param name="kind"></param>
         /// <returns></returns>
-        public static bool IsAsset(this AssetKind kind) => !kind.IsFolder();
+        internal static bool IsAsset(this AssetKind kind) => !kind.IsFolder();
 
         /// <summary>
         /// 是否是忽略引用计算的
         /// </summary>
         /// <param name="kind"></param>
         /// <returns></returns>
-        public static bool IsIngoreReference(this AssetKind kind) => (AssetKind.IgnoreReference & kind) != AssetKind.None;
+        internal static bool IsIngoreReference(this AssetKind kind) => (AssetKind.IgnoreReference & kind) != AssetKind.None;
 
         /// <summary>
         /// 显示资源监控窗口
         /// </summary>
         /// <param name="assetGuid">显示选项</param>
         /// <param name="showReference">显示引用还是依赖</param>
-        public static void SetSelectAsset(string assetGuid, bool showReference = true)
+        internal static void SetSelectAsset(string assetGuid, bool showReference = true)
         {
             AssetMonitorWindow window = ShowAssetMonitorWindow();
             window.SelectAsset(assetGuid, showReference);
@@ -276,7 +281,7 @@ namespace MFramework.AssetMonitor
         /// </summary>
         /// <param name="record"></param>
         /// <returns></returns>
-        public static long GetAssetUnitySize(AssetInfoRecord record)
+        internal static long GetAssetUnitySize(AssetInfoRecord record)
         {
             switch (record.AssetType)
             {
@@ -469,13 +474,13 @@ namespace MFramework.AssetMonitor
         //获取类型的正则
         private static string _typeReg = string.Format("(?<{0}>[0-9]+)", "type");
         //通用依赖解析正则 {\s*fileID\s*:\s*(?<fileID>[0-9-]+)\s*,\s*guid\s*:\s*(?<guid>[a-z0-9]{32,32})\s*,\s*type\s*:\s*(?<type>[0-9]+)\s*}
-        public static string normalGuidPattern = string.Join(@"\s*", "{", "fileID", ":", _fileIDReg, ",", "guid", ":", _guidReg, ",", "type", ":", _typeReg, "}");
+        internal static string normalGuidPattern = string.Join(@"\s*", "{", "fileID", ":", _fileIDReg, ",", "guid", ":", _guidReg, ",", "type", ":", _typeReg, "}");
         /// <summary>
         /// 判断是不是yaml文件
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static bool IsYamlFile(string path)
+        internal static bool IsYamlFile(string path)
         {
             if (Directory.Exists(path))
                 return false;
@@ -493,7 +498,7 @@ namespace MFramework.AssetMonitor
         /// </summary>
         /// <param name="path"></param>
         /// <returns>Guid[]</returns>
-        public static string[] FindDependenciesByYaml(string path)
+        internal static string[] FindDependenciesByYaml(string path)
         {
             if (!IsYamlFile(path))
                 return StringEmpty;
@@ -514,7 +519,7 @@ namespace MFramework.AssetMonitor
 
         #region GUID
 
-        public static bool CheckGuid(string guid, bool isLogError = true)
+        internal static bool CheckGuid(string guid, bool isLogError = true)
         {
             if (guid.Length != GUID_LENGTH)
             {
@@ -534,7 +539,7 @@ namespace MFramework.AssetMonitor
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static string AssetPathToGuid(string path)
+        internal static string AssetPathToGuid(string path)
         {
             string guid = string.Empty;
             if (!CheckAssetPath(path))
@@ -550,14 +555,14 @@ namespace MFramework.AssetMonitor
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static string GuidToAssetPath(string guid)
+        internal static string GuidToAssetPath(string guid)
         {
             if (guid == SPECIAL_GUID)
                 return SPECIAL_FOLDER;
             return AssetDatabase.GUIDToAssetPath(guid);
         }
 
-        public static bool IsMissingGUID(string guid)
+        internal static bool IsMissingGUID(string guid)
         {
             string path = GuidToAssetPath(guid);
 
@@ -580,7 +585,7 @@ namespace MFramework.AssetMonitor
         /// 检查路径是否合规
         /// </summary>
         /// <returns></returns>
-        public static bool CheckAssetPath(string path)
+        internal static bool CheckAssetPath(string path)
         {
             // 特殊路径直接返回true
             if (s_specialFiles.Contains(path))
@@ -595,7 +600,7 @@ namespace MFramework.AssetMonitor
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        public static string FormatAssetPath(string path)
+        internal static string FormatAssetPath(string path)
         {
             if (s_specialFiles.Contains(path))
                 return path;
@@ -603,7 +608,7 @@ namespace MFramework.AssetMonitor
             return string.IsNullOrWhiteSpace(path) ? path : path.Replace('\\', '/');
         }
 
-        public static Texture2D GetIconByAssetPath(string path)
+        internal static Texture2D GetIconByAssetPath(string path)
         {
             if (path == SPECIAL_FOLDER)
                 return AssetDatabase.GetCachedIcon("Assets") as Texture2D;
@@ -629,7 +634,7 @@ namespace MFramework.AssetMonitor
             }
         }
 
-        public static Texture2D GetIconByGuid(string guid) => GetIconByAssetPath(GuidToAssetPath(guid));
+        internal static Texture2D GetIconByGuid(string guid) => GetIconByAssetPath(GuidToAssetPath(guid));
 
         /// <summary>
         /// 格式化成磁盘相对路径
@@ -673,23 +678,20 @@ namespace MFramework.AssetMonitor
         {
             if (files.Length == 0)
                 return;
-            try
+            int total = files.Length;
+            for (int i = 0; i < total; i++)
             {
-                int total = files.Length;
-                for (int i = 0; i < total; i++)
+                EditorUtility.DisplayProgressBar("资源监控", $"正在处理资源 {i + 1}/{total}", (float)(i + 1) / total);
+                try
                 {
-                    EditorUtility.DisplayProgressBar("资源监控", $"正在处理资源 {i + 1}/{total}", (float)(i + 1) / total);
                     s_parseAssetPath(files[i]);
                 }
+                catch (Exception ex)
+                {
+                    UnityDebug.LogError(ex.ToString());
+                }
             }
-            catch (Exception ex)
-            {
-                UnityDebug.LogError(ex.ToString());
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
+            EditorUtility.ClearProgressBar();
         }
 
 
@@ -742,15 +744,17 @@ namespace MFramework.AssetMonitor
 
         private static AssetKind s_getAssetKind(string path)
         {
+            if (s_specialFiles.Contains(path))
+                return AssetKind.SpecialAsset;
+
             string diskPath = s_formatDiskPath(path);
             var kind = AssetKind.NormalAsset;
-            if (!AssetDatabase.IsValidFolder(diskPath))
+            if (!IsFolder(path))
             {
                 kind = diskPath switch
                 {
                     SPECIAL_FOLDER => AssetKind.SpecialFolder,
                     LIBRARY_FOLDER => AssetKind.LibraryFolder,
-                    var p when s_specialFiles.Contains(p) => AssetKind.SpecialAsset,
                     var p when p.StartsWith(LIBRARY_FOLDER) => AssetKind.LibraryAsset,
                     _ => AssetKind.NormalAsset
                 };
@@ -769,6 +773,19 @@ namespace MFramework.AssetMonitor
         #endregion
 
         #region AssetInfoRecord
+
+        /// <summary>
+        /// 根据guid获取AssetInfoRecord
+        /// </summary>
+        /// <param name="guid"></param>
+        /// <returns></returns>
+        internal static AssetInfoRecord GetRecordByGuid(string guid) => GetRecordByGuid(guid, false);
+        /// <summary>
+        /// 通过Path获取AssetInfoRecord
+        /// </summary>
+        /// <param name="assetPath"></param>
+        /// <returns></returns>
+        internal static AssetInfoRecord GetRecordByAssetPath(string assetPath) => GetRecordByAssetPath(assetPath, false);
 
         /// <summary>
         /// 根据guid获取AssetInfoRecord

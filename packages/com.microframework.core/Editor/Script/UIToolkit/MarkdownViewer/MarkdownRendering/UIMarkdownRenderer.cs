@@ -78,7 +78,7 @@ namespace MFramework.Core.Editor
         {
             if (s_DefaultStylesheet == null)
             {
-                s_DefaultStylesheet = Resources.Load<StyleSheet>($"{MicroContextEditor.EDITOR_RESOURCE_PATH}/UIToolkit/Markdown/MarkdownRenderer");
+                s_DefaultStylesheet = AssetDatabase.LoadAssetAtPath<StyleSheet>($"{MicroContextEditor.EDITOR_ASSET_PATH}/UIToolkit/Markdown/MarkdownRenderer.uss");
 
                 if (s_DefaultStylesheet == null)
                     Debug.LogError("Couldn't load the MarkdownRenderer.uss stylesheet");

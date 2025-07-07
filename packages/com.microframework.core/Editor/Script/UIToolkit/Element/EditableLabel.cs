@@ -87,7 +87,7 @@ namespace MFramework.Core.Editor
             }
         }
 #endif
-        public static readonly string ussStyleFile = "UIToolkit/Element/EditableLabelStyle";
+        public static readonly string ussStyleFile = "UIToolkit/Element/EditableLabelStyle.uss";
         /// <summary> USS class name of elements of this type. </summary>
         public static readonly string ussClassName = "editor-editable-label";
         /// <summary> USS class name of the TextField inside this element. </summary>

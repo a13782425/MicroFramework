@@ -1,9 +1,11 @@
-﻿using MFramework.Task;
+﻿using MFramework.Core;
 using MFramework.Runtime;
+using MFramework.Task;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityObject = UnityEngine.Object;
-using System;
 
 namespace MFramework.UI
 {
@@ -15,32 +17,48 @@ namespace MFramework.UI
 
         [BindableField("可绑定属性")]
         private int _siblingIndex;
-        partial void OnSiblingIndexPreGet() => _siblingIndex = this.rectTransform.GetSiblingIndex();
-        partial void OnSiblingIndexPrePublish(int oldValue, int newValue) => this.rectTransform.SetSiblingIndex(newValue);
+        partial void OnSiblingIndexPreGet() => _siblingIndex = this.RectTransform.GetSiblingIndex();
+        partial void OnSiblingIndexPrePublish(int oldValue, int newValue) => this.RectTransform.SetSiblingIndex(newValue);
 
         private object _data;
         /// <summary>
         /// 界面数据,每次打开界面时候传递的
         /// </summary>
-        public object data { get => _data; internal set => _data = value; }
+        public object Data { get => _data; internal set => _data = value; }
+        private UIState _state = UIState.Load;
+        /// <summary>
+        /// 界面状态
+        /// </summary>
+        public UIState State { get => _state; internal set => _state = value; }
+
+        /// <summary>
+        /// 下一个状态
+        /// </summary>
+        private UIState _nextState = UIState.None;
         /// <summary>
         /// 当前界面所在的画布
         /// </summary>
-        public Canvas canvas { get; private set; }
+        public Canvas Canvas { get; private set; }
         /// <summary>
         /// 父级界面
         /// </summary>
-        public UIView parent { get; private set; }
+        public UIView Parent { get; private set; }
         /// <summary>
         /// 当前界面的子界面列表
         /// </summary>
-        private readonly Dictionary<int, UIWidget> _widgets = new Dictionary<int, UIWidget>();
+        private readonly Dictionary<int, UIView> _children = new Dictionary<int, UIView>();
         /// <summary>
         /// 资源句柄
         /// </summary>
         private Dictionary<string, ResHandler> _resHandler = new Dictionary<string, ResHandler>();
 
-    }//不可重写方法
+        /// <summary>
+        /// 界面的mono
+        /// </summary>
+        private UIMono _mono = default;
+
+    }
+    //不可重写方法
     partial class UIView
     {
 
@@ -49,18 +67,22 @@ namespace MFramework.UI
         /// </summary>
         public void Show(object data = null)
         {
+            Data = data;
+            Internal_Show();
         }
         /// <summary>
         /// 隐藏一个视图
         /// </summary>
         public void Hide()
         {
+            Internal_Hide();
         }
         /// <summary>
         /// 关闭一个视图
         /// </summary>
         public void Close()
         {
+            Internal_Close();
         }
 
         /// <summary>
@@ -68,14 +90,14 @@ namespace MFramework.UI
         /// </summary>
         public void SetAsFirstSibling()
         {
-            this.rectTransform.SetAsFirstSibling();
+            this.RectTransform.SetAsFirstSibling();
         }
         /// <summary>
         /// 设置到当前层级的最后一位
         /// </summary>
         public void SetAsLastSibling()
         {
-            this.rectTransform.SetAsLastSibling();
+            this.RectTransform.SetAsLastSibling();
         }
         /// <summary>
         /// 添加Widget
@@ -84,12 +106,9 @@ namespace MFramework.UI
         /// <returns></returns>
         public T AddWidget<T>(Transform parent = null, object data = null) where T : UIWidget, new()
         {
-            parent = parent ?? this.transform;
-            T view = new T();
-            view.data = data;
-            view.parent = this;
-            //UIModuleUtils.CreateView(view, parent);
-            _widgets.Add(view.GetHashCode(), view);
+            parent = parent ?? this.Transform;
+            T view = UIModuleUtils.CreateView<T>(parent, this, data);
+            _children.Add(view.GetHashCode(), view);
             return view;
         }
         /// <summary>
@@ -102,11 +121,8 @@ namespace MFramework.UI
             if (obj == null)
                 throw new Exception("Widget对应的GameObject是空");
             T view = new T();
-            view.gameObject = obj;
-            view.data = data;
-            view.parent = this;
-            //view.Internal_Create();
-            _widgets.Add(view.GetHashCode(), view);
+            view.Internal_Create(obj, this, data);
+            _children.Add(view.GetHashCode(), view);
             return view;
         }
         /// <summary>
@@ -116,7 +132,7 @@ namespace MFramework.UI
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T GetWidget<T>() where T : UIView
+        public T GetWidget<T>() where T : UIWidget, new()
         {
             return GetWidget(typeof(T)) as T;
         }
@@ -129,9 +145,9 @@ namespace MFramework.UI
         /// <returns></returns>
         public UIWidget GetWidget(Type widgetType)
         {
-            foreach (var widget in _widgets)
+            foreach (var widget in _children)
                 if (widget.Value.GetType() == widgetType)
-                    return widget.Value;
+                    return widget.Value as UIWidget;
             return default(UIWidget);
         }
         /// <summary>
@@ -140,10 +156,10 @@ namespace MFramework.UI
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public List<T> GetWidgets<T>() where T : UIView
+        public List<T> GetWidgets<T>() where T : UIWidget, new()
         {
             List<T> widgets = new List<T>();
-            foreach (var item in _widgets)
+            foreach (var item in _children)
                 if (item.Value is T widget)
                     widgets.Add(widget);
             return widgets;
@@ -157,52 +173,161 @@ namespace MFramework.UI
         public List<UIWidget> GetWidgets(Type widgetType)
         {
             List<UIWidget> widgets = new List<UIWidget>();
-            foreach (var item in _widgets)
+            foreach (var item in _children)
                 if (item.Value.GetType() == widgetType)
-                    widgets.Add(item.Value);
+                    widgets.Add(item.Value as UIWidget);
             return widgets;
         }
 
+        /// <summary>
+        /// 移除类型为T 的widget
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>移除的数量</returns>
+        public int RemoveWidget<T>() where T : UIWidget, new()
+        {
+            int removeCount = 0;
+            foreach (var item in _children.Keys.ToList())
+            {
+                if (_children.TryGetValue(item, out UIView value))
+                {
+                    if (value is T)
+                    {
+                        removeCount++;
+                        value.Internal_Close();
+                    }
+                }
+            }
+            return removeCount;
+        }
 
         /// <summary>
         /// 内部创建方法
         /// </summary>
-        internal void Internal_Create()
+        internal void Internal_Create(GameObject uiObject, UIView parent = null, object data = null)
         {
+            this.GameObject = uiObject;
+            this.Data = data;
+            this.Parent = parent;
+            this.Canvas = this.Transform.GetComponentInParent<Canvas>();
+            InitializeElement();
+            _mono = uiObject.AddComponent<UIMono>();
+            _mono.Init(this);
+            this.State = UIState.Loaded;
+            switch (_nextState)
+            {
+                case UIState.None:
+                case UIState.Showed:
+                    Internal_Show();
+                    break;
+                case UIState.Hidden:
+                    Internal_Hide();
+                    break;
+                case UIState.Closed:
+                    Internal_Close();
+                    break;
+                default:
+                    break;
+            }
         }
         /// <summary>
         /// 内部显示方法
         /// </summary>
         internal void Internal_Show()
         {
+            if (this.State == UIState.Closed)
+            {
+                Logger?.LogError($"界面：{this} 已经关闭，无法显示");
+                return;
+            }
+            if (this.State == UIState.Load)
+            {
+                _nextState = UIState.Showed;
+                return;
+            }
+            _nextState = UIState.None;
+            this.State = UIState.Showed;
+            this.ActiveSelf = true;
+            if (this is IMicroLogicUpdate logicUpdate)
+                MicroContext.AddLogicUpdate(logicUpdate);
+            if (this is IMicroUpdate update)
+                MicroContext.AddUpdate(update);
         }
         /// <summary>
         /// 内部隐藏方法
         /// </summary>
         internal void Internal_Hide()
         {
+            if (this.State == UIState.Closed)
+            {
+                Logger?.LogError($"界面：{this} 已经关闭，无法显示");
+                return;
+            }
+            if (this.State == UIState.Load)
+            {
+                _nextState = UIState.Hidden;
+                return;
+            }
+            _nextState = UIState.None;
+            this.State = UIState.Hidden;
+            this.ActiveSelf = false;
+            if (this is IMicroLogicUpdate logicUpdate)
+                MicroContext.RemoveLogicUpdate(logicUpdate);
+            if (this is IMicroUpdate update)
+                MicroContext.RemoveUpdate(update);
         }
         /// <summary>
         /// 内部关闭方法
         /// </summary>
         internal void Internal_Close()
         {
+            if (this.State == UIState.Closed)
+            {
+                Logger?.LogWarning($"界面：{this} 已经关闭，无需再次关闭");
+                return;
+            }
+            if (this.State == UIState.Load)
+            {
+                _nextState = UIState.Closed;
+                return;
+            }
+            _nextState = UIState.None;
+            foreach (var item in _resHandler)
+            {
+                UIModuleUtils.UnloadAsset(item.Key);
+            }
+            _resHandler.Clear();
+            _children.Clear();
+            this.State = UIState.Closed;
+            GameObject.DestroyImmediate(this._mono);
+            if (this.Parent != null)
+                this.Parent._children.Remove(this.GetHashCode());
+            UIModuleUtils.ReleaseUIAsset(this);
         }
     }
     //资源类
     partial class UIView
     {
-        protected internal void Load<T>(string resPath, ResLoadDelegate<T> callback, params object[] args) where T : UnityObject
+        /// <summary>
+        /// 加载一个资源
+        /// 会随着界面关闭而销毁
+        /// </summary>
+        /// <param name="resPath"></param>
+        /// <returns></returns>
+        public void Load<T>(string resPath, ResLoadDelegate<T> callback, params object[] args) where T : UnityObject
         {
+            if (GameObject == null)
+                throw new NullReferenceException("界面没有加载完成");
+
             if (_resHandler.TryGetValue(resPath, out ResHandler handler))
             {
-                if (handler.isDone)
+                if (handler.IsDone)
                 {
-                    callback.Invoke(handler.asset as T, args);
+                    callback.Invoke(handler.Asset as T, args);
                 }
                 else
                 {
-                    m_waitLoad(handler, callback, args);
+                    m_waitLoad(handler, callback, args).ToDepend(this.GameObject);
                 }
             }
             else
@@ -210,12 +335,12 @@ namespace MFramework.UI
                 handler = UIModuleUtils.resourceModule.Load<T>(resPath, callback, args);
                 _resHandler.Add(resPath, handler);
             }
-            async void m_waitLoad(ResHandler handler, ResLoadDelegate<T> callback, object[] args)
+            async MicroTask m_waitLoad(ResHandler handler, ResLoadDelegate<T> callback, object[] args)
             {
-                await handler.ToMicroTask().ToDepend(this.gameObject);
-                if (handler.isCancel)
+                await handler;
+                if (handler.IsCancel)
                     return;
-                callback.Invoke(handler.asset as T, args);
+                callback.Invoke(handler.Asset as T, args);
             }
         }
         /// <summary>
@@ -224,7 +349,7 @@ namespace MFramework.UI
         /// </summary>
         /// <param name="resPath"></param>
         /// <returns></returns>
-        protected internal ResHandler Load(string resPath, Type type = null)
+        public ResHandler Load(string resPath, Type type = null)
         {
             if (_resHandler.TryGetValue(resPath, out ResHandler handler))
             {
@@ -279,29 +404,59 @@ namespace MFramework.UI
         private class UIMono : MonoBehaviour
         {
             private UIView _view;
+            private bool _isInit = false;
+            private bool _isPanel = false;
             void Awake()
             {
                 this.hideFlags = HideFlags.HideAndDontSave;
+                this.enabled = false;
             }
             public void Init(UIView view)
             {
                 //onCreate
+                _isInit = true;
                 _view = view;
+                _isPanel = view is UIPanel;
+                this.hideFlags = HideFlags.HideAndDontSave | HideFlags.HideInHierarchy | HideFlags.HideInInspector;
+                this.gameObject.name = view.GetType().Name;
+                _view.GetViewModel()?.OnCreate();
+                _view.OnCreate();
+                if (_isPanel)
+                    (UIModuleUtils.uiModule as UIModule)?.Internal_Create(this._view);
+                this.enabled = true;
             }
 
             private void OnEnable()
             {
                 //onEnable
+                if (!_isInit)
+                    return;
+                this._view.GetViewModel()?.OnEnable();
+                this._view.OnEnable();
+                if (_isPanel)
+                    (UIModuleUtils.uiModule as UIModule)?.Internal_Show(this._view);
             }
 
             private void OnDisable()
             {
                 //onDisable
+                if (!_isInit)
+                    return;
+                this._view.OnDisable();
+                this._view.GetViewModel()?.OnDisable();
+                if (_isPanel)
+                    (UIModuleUtils.uiModule as UIModule)?.Internal_Hide(this._view);
             }
 
             private void OnDestroy()
             {
                 //onDestroy
+                if (!_isInit)
+                    return;
+                _view.OnDestroy();
+                _view.GetViewModel()?.OnDestroy();
+                if (_isPanel)
+                    (UIModuleUtils.uiModule as UIModule)?.Internal_Close(this._view);
             }
 
         }

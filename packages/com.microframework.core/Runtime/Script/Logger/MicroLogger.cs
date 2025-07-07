@@ -45,15 +45,17 @@ namespace MFramework.Core
                 Debug.LogException(exception);
             }
         }
-
-        private static IMicroLogger _logger = new UnityLogger("MFramework");
-
+        
+        static MicroLogger()
+        {
+            _isDebugEnabled = true;
+        }
+       
         /// <summary>
         /// 创建日志对象
         /// string:名字
         /// </summary>
         public static event Func<string, IMicroLogger> onCreateLogger;
-
 
         private static bool _isDebugEnabled = true;
         /// <summary>
@@ -71,6 +73,7 @@ namespace MFramework.Core
         }
 
         private static Dictionary<string, IMicroLogger> _cacheLoggers = new Dictionary<string, IMicroLogger>();
+        private static IMicroLogger _logger = new UnityLogger("MFramework");
         /// <summary>
         /// 获取一个日志
         /// </summary>

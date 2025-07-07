@@ -13,7 +13,7 @@ namespace YooAsset
         public static EditorSimulateBuildResult SimulateBuild(EditorSimulateBuildParam buildParam)
         {
             if (_classType == null)
-                _classType = Assembly.Load("YooAsset.Editor").GetType("YooAsset.Editor.AssetBundleSimulateBuilder");
+                _classType = Assembly.Load("MFramework.YooAsset.Editor").GetType("YooAsset.Editor.AssetBundleSimulateBuilder");
 
             return (EditorSimulateBuildResult)InvokePublicStaticMethod(_classType, "SimulateBuild", buildParam);
         }

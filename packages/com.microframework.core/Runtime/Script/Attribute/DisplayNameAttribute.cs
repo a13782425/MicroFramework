@@ -5,14 +5,15 @@ using UnityEngine;
 namespace MFramework.Core
 {
     /// <summary>
-    /// ×Ö¶ÎÔÚInspectorÉÏÏÔÊ¾Ãû³Æ
+    /// å¯¹è±¡çš„æ˜¾ç¤ºåå­—
+    /// ä¸æ”¯æŒgui, å¦‚æœéœ€è¦æ”¯æŒè¯·è‡ªè¡Œå®ç°Drawer
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Class, AllowMultiple = false)]
     [Conditional("UNITY_EDITOR")]
     public class DisplayNameAttribute : PropertyAttribute
     {
         /// <summary>
-        /// ĞèÒªÏÔÊ¾µÄÃû×Ö
+        /// éœ€è¦æ˜¾ç¤ºçš„åå­—
         /// </summary>
         public readonly string DisplayName;
 

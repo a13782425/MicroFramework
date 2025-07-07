@@ -34,8 +34,8 @@ namespace MFramework.AssetMonitor
         //引用类型
         private Label _refTitleLabel;
 
-        private List<MTreeViewItemData> _allItems = new List<MTreeViewItemData>();
-        private List<MTreeViewItemData> _relationItems = new List<MTreeViewItemData>();
+        private List<MTreeItemData> _allItems = new List<MTreeItemData>();
+        private List<MTreeItemData> _relationItems = new List<MTreeItemData>();
         private List<RelationInfo> _relationCacheList = new List<RelationInfo>();
 
         public override void Init(AssetMonitorWindow window)
@@ -139,13 +139,13 @@ namespace MFramework.AssetMonitor
             }
             var rootRelation = new RelationInfo();
             rootRelation.Guid = record.Guid;
-            var referencedByItem = new MTreeViewItemData(rootRelation);
+            var referencedByItem = new MTreeItemData(rootRelation);
             if (_relationCacheList.Count > 0)
             {
                 foreach (var relationGroup in _relationCacheList.GroupBy(a => a.Relation).ToDictionary(a => a.Key, a => a.ToList()))
                 {
-                    var relationByChildren = new List<MTreeViewItemData>();
-                    var childItem = new MTreeViewItemData(relationGroup.Key, relationByChildren);
+                    var relationByChildren = new List<MTreeItemData>();
+                    var childItem = new MTreeItemData(relationGroup.Key, relationByChildren);
                     referencedByItem.AddChild(childItem);
                     relationGroup.Value.Sort((a, b) =>
                     {
@@ -159,7 +159,7 @@ namespace MFramework.AssetMonitor
                     });
                     foreach (var relation in relationGroup.Value)
                     {
-                        childItem.AddChild(new MTreeViewItemData(relation));
+                        childItem.AddChild(new MTreeItemData(relation));
                     }
                 }
 
@@ -167,14 +167,14 @@ namespace MFramework.AssetMonitor
             }
             else
             {
-                referencedByItem.AddChild(new MTreeViewItemData(showReference ? "该资源没有引用" : "该资源没有被依赖"));
+                referencedByItem.AddChild(new MTreeItemData(showReference ? "该资源没有引用" : "该资源没有被依赖"));
                 _relationItems.Add(referencedByItem);
             }
             if (record.VerifyResults.Count > 0)
             {
-                var verifyItem = new MTreeViewItemData("文件校验结果");
+                var verifyItem = new MTreeItemData("文件校验结果");
                 foreach (var item in record.VerifyResults)
-                    verifyItem.AddChild(new MTreeViewItemData(item));
+                    verifyItem.AddChild(new MTreeItemData(item));
                 _relationItems.Add(verifyItem);
             }
 
@@ -197,7 +197,7 @@ namespace MFramework.AssetMonitor
                     break;
                 }
             }
-            MTreeViewItemData m_searchTreeItem(MTreeViewItemData item)
+            MTreeItemData m_searchTreeItem(MTreeItemData item)
             {
                 AssetInfoRecord record = item.GetData<AssetInfoRecord>();
 
@@ -279,7 +279,7 @@ namespace MFramework.AssetMonitor
         //}
 
         // 选中一个树并滚动到该节点
-        private void m_selectTreeViewItem(MTreeViewItemData item, bool expandAll = false, bool withoutNotify = false)
+        private void m_selectTreeViewItem(MTreeItemData item, bool expandAll = false, bool withoutNotify = false)
         {
             if (expandAll)
                 _folderTreeView.ExpandAll();
@@ -369,13 +369,13 @@ namespace MFramework.AssetMonitor
         }
 
         //绑定文件树
-        private void m_bindTreeItem(VisualElement element, MTreeViewItemData item)
+        private void m_bindTreeItem(VisualElement element, MTreeItemData item)
         {
             var record = item.Data as AssetInfoRecord;
             if (record == null) return;
             var treeItemView = element as FolderTreeItemView;
             if (treeItemView == null) return;
-            treeItemView.Refresh(record);
+            treeItemView.Refresh(item);
         }
         private void m_refreshFileTree()
         {
@@ -386,7 +386,7 @@ namespace MFramework.AssetMonitor
             if (record != null)
             {
                 var assetsChildren = m_scanDirectory(record);
-                var assetsItem = new MTreeViewItemData(record, assetsChildren);
+                var assetsItem = new MTreeItemData(record, assetsChildren);
                 _allItems.Add(assetsItem);
             }
 
@@ -395,7 +395,7 @@ namespace MFramework.AssetMonitor
             if (record != null)
             {
                 var assetsChildren = m_scanDirectory(record);
-                var assetsItem = new MTreeViewItemData(record, assetsChildren);
+                var assetsItem = new MTreeItemData(record, assetsChildren);
                 _allItems.Add(assetsItem);
             }
 
@@ -404,16 +404,16 @@ namespace MFramework.AssetMonitor
             _folderTreeView.Rebuild();
         }
 
-        private List<MTreeViewItemData> m_scanDirectory(AssetInfoRecord record)
+        private List<MTreeItemData> m_scanDirectory(AssetInfoRecord record)
         {
-            var children = new List<MTreeViewItemData>();
+            var children = new List<MTreeItemData>();
             try
             {
                 // 获取所有子目录
                 foreach (var child in record.Childs)
                 {
                     var dirChildren = m_scanDirectory(child);
-                    var dirTreeItem = new MTreeViewItemData(child, dirChildren);
+                    var dirTreeItem = new MTreeItemData(child, dirChildren);
                     children.Add(dirTreeItem);
                 }
                 children.Sort((a, b) =>
@@ -433,7 +433,7 @@ namespace MFramework.AssetMonitor
             return children;
         }
 
-        private void m_onSelectionChanged(IEnumerable<MTreeViewItemData> selectedItems)
+        private void m_onSelectionChanged(IEnumerable<MTreeItemData> selectedItems)
         {
             foreach (var item in selectedItems)
             {
@@ -480,7 +480,7 @@ namespace MFramework.AssetMonitor
             return new ReferenceTreeItemView(this);
         }
 
-        private void m_bindReferenceItem(VisualElement element, MTreeViewItemData item)
+        private void m_bindReferenceItem(VisualElement element, MTreeItemData item)
         {
             var treeItemView = element as ReferenceTreeItemView;
             if (treeItemView == null) return;
@@ -488,7 +488,7 @@ namespace MFramework.AssetMonitor
             treeItemView.Refresh(item.Data);
         }
 
-        private void m_onReferenceSelectionChanged(IEnumerable<MTreeViewItemData> selectedItems)
+        private void m_onReferenceSelectionChanged(IEnumerable<MTreeItemData> selectedItems)
         {
             if (!AssetMonitorConfig.Instance.SelectInProject)
                 return;

@@ -26,7 +26,16 @@ namespace MFramework.Editor
             _patchClassElement = new MicroClassElement("资源补丁配置", _config.ResourcePatchSerializer, typeof(IResourcePatcher));
             this.panel.Add(_pathClassElement);
             this.panel.Add(_patchClassElement);
+            //var element = new MicroObjectField(new abc());
+            //element.ShowFoldout = true;
+            //this.Add(element);
             return base.Init();
         }
     }
+
+    //public class abc
+    //{
+    //    public int i;
+    //}
+
 }

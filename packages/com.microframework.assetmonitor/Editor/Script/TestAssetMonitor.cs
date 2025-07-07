@@ -16,9 +16,9 @@ namespace MFramework.AssetMonitor
         public string Name => "测试";
         public string Description => "";
 
-        public IEnumerable<string> OnAssetChanged(string filePath)
+        public IEnumerable<string> OnAssetChanged(AssetInfoRecord record)
         {
-            return File.ReadAllLines(filePath);
+            return File.ReadAllLines(record.AssetPath);
         }
     }
     internal class Test2AssetMonitor : IAssetMonitorWatcher
@@ -29,9 +29,9 @@ namespace MFramework.AssetMonitor
 
         public string Description => "";
 
-        public IEnumerable<string> OnAssetChanged(string filePath)
+        public IEnumerable<string> OnAssetChanged(AssetInfoRecord record)
         {
-            Debug.LogError(filePath);
+            Debug.LogError(record.AssetPath);
             return new List<string>();// File.ReadAllLines(filePath);
         }
     }

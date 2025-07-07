@@ -4,7 +4,7 @@
     "references": [
         "MFramework.Core",
         "MFramework.Core.Editor",
-        "MFramework.YooAsset.Runtime",
+        "MFramework.YooAsset",
         "Unity.ScriptableBuildPipeline",
         "Unity.ScriptableBuildPipeline.Editor"
     ],

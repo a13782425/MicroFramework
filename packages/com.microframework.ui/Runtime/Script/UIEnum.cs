@@ -44,4 +44,36 @@ namespace MFramework.UI
         /// </summary>
         Max = 1 << 12,
     }
+    /// <summary>
+    /// UI状态枚举
+    /// </summary>
+    [Flags]
+    public enum UIState
+    {
+        None = 0,
+        /// <summary>
+        /// 加载中
+        /// </summary>
+        Load = 1 << 0,
+        /// <summary>
+        /// 加载完毕
+        /// </summary>
+        Loaded = 1 << 1,
+        /// <summary>
+        /// 处于显示状态
+        /// </summary>
+        Showed = 1 << 3,
+        /// <summary>
+        /// 处于隐藏状态(预先隐藏, 不会走OnEnable, 但会走OnDisable)
+        /// </summary>
+        Hidden = 1 << 5,
+        /// <summary>
+        /// 处于关闭状态
+        /// </summary>
+        Closed = 1 << 7,
+        /// <summary>
+        /// 错误
+        /// </summary>
+        Error = 1 << 10,
+    }
 }

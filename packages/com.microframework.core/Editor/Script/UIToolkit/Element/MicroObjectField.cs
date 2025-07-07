@@ -1,15 +1,260 @@
-﻿//using System;
-//using System.Collections;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Reflection;
-//using UnityEditor;
-//using UnityEditor.UIElements;
-//using UnityEngine;
-//using UnityEngine.UIElements;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using UnityEngine;
+using UnityEngine.UIElements;
 
-//namespace MFramework.Core.Editor
-//{
+namespace MFramework.Core.Editor
+{
+    public sealed class MicroObjectField : VisualElement
+    {
+        #region 常量定义
+
+        private const string STYLE_PATH = "UIToolkit/Element/MicroObjectFieldStyle";
+        private const string BASE_CLASS = "micro-object-field";
+        private const string HEADER_CLASS = BASE_CLASS + "__header";
+        private const string FOLDOUT_CLASS = BASE_CLASS + "__foldout";
+        private const string CONTAINER_CLASS = BASE_CLASS + "__container";
+        private const string NULL_LABEL_CLASS = BASE_CLASS + "__null";
+
+        private const int NESTING_WIDTH = 15;
+        #endregion
+
+        #region 私有字段
+
+        private static Type[] _unityTypes = new Type[]
+        {
+            typeof(Vector2),
+            typeof(Vector2Int),
+            typeof(Vector3),
+            typeof(Vector3Int),
+            typeof(Vector4),
+            typeof(Quaternion),
+            typeof(Color),
+            typeof(Rect),
+            typeof(Bounds),
+            typeof(LayerMask),
+        };
+
+        private readonly Func<object> _valueGetter;
+        private readonly Action<object> _valueSetter;
+        //private bool IsReadOnly => _valueSetter == null || _category == ObjectCategory.Struct;
+        private readonly bool _needShowChildren = false;
+        private object _value;
+        private MicroObjectField _parent = null;
+        private Foldout _foldout;
+        private VisualElement _headerContainer;
+        private VisualElement _valueContainer;
+        //private ObjectCategory _category;
+        private int _nestingLevel;
+
+        private bool _showFoldout;
+
+        private List<FieldInfo> _fieldInfos = new List<FieldInfo>();
+        #endregion
+
+        #region 属性定义
+        /// <summary>
+        /// 父级对象
+        /// </summary>
+        public MicroObjectField Parent => _parent;
+        /// <summary>
+        /// 缩进层级
+        /// </summary>
+        public int NestingLevel => _showFoldout ? _nestingLevel + 1 : _nestingLevel;
+
+        /// <summary>
+        /// 是否显示折叠按钮
+        /// </summary>
+        public bool ShowFoldout
+        {
+            get => _showFoldout;
+            set
+            {
+                if (_showFoldout == value)
+                    return;
+                _showFoldout = value;
+                if (value)
+                {
+                    _foldout.style.display = DisplayStyle.Flex;
+                }
+                else
+                    _foldout.style.display = DisplayStyle.None;
+                _valueContainer.style.marginLeft = NESTING_WIDTH * NestingLevel;
+            }
+        }
+
+        /// <summary>
+        /// 对象值
+        /// </summary>
+        public object Value
+        {
+            get => _value;
+            set
+            {
+                if (value != null)
+                {
+                    if (!value.GetType().IsClass || value.GetType().IsAbstract)
+                        throw new NotSupportedException("MicroObjectField only supports class types.");
+                }
+                if (_value != value)
+                {
+                    _value = value;
+                    Rebuild();
+                }
+            }
+        }
+        #endregion
+
+        #region 构造函数
+
+        /// <summary>
+        /// 创建只读对象查看器
+        /// </summary>
+        public MicroObjectField(object target)
+        {
+            if (target != null)
+            {
+                if (!target.GetType().IsClass || target.GetType().IsAbstract)
+                    throw new NotSupportedException("MicroObjectField only supports class types.");
+            }
+            _value = target;
+            //_headerContainer = new VisualElement { name = "Header" };
+            //_headerContainer.AddToClassList(HEADER_CLASS);
+            //_valueContainer = new VisualElement { name = "ValueContainer" };
+            //_valueContainer.AddToClassList(CONTAINER_CLASS);
+            //this.Add(_headerContainer);
+            //this.Add(_valueContainer);
+            m_buildHeader();
+            m_buildValueContainer();
+            Rebuild();
+        }
+
+
+        #endregion
+
+        public void Rebuild()
+        {
+            m_analyzeFileInfos();
+            if (_showFoldout)
+            {
+                _foldout.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                _foldout.style.display = DisplayStyle.None;
+                _valueContainer.style.display = DisplayStyle.Flex;
+            }
+            _valueContainer.style.marginLeft = NESTING_WIDTH * NestingLevel;
+            _valueContainer.Clear();
+            m_showFieldElement();
+        }
+
+
+        #region UI构建方法
+        private void AddNullDisplay()
+        {
+            var nullLabel = new Label("null") { name = "NullLabel" };
+            nullLabel.AddToClassList(NULL_LABEL_CLASS);
+            Add(nullLabel);
+        }
+        private void m_buildHeader()
+        {
+            _headerContainer = new VisualElement { name = "Header" };
+            _headerContainer.AddToClassList(HEADER_CLASS);
+            this.Add(_headerContainer);
+            _foldout = new Foldout { value = true };
+            _foldout.text = MicroContextEditorUtils.GetDisplayName(Value);
+            _foldout.AddToClassList(FOLDOUT_CLASS);
+            _foldout.RegisterValueChangedCallback(m_onFoldoutToggled);
+            _headerContainer.Add(_foldout);
+        }
+        private void m_buildValueContainer()
+        {
+            _valueContainer = new VisualElement { name = "ValueContainer" };
+            _valueContainer.AddToClassList(CONTAINER_CLASS);
+            this.Add(_valueContainer);
+        }
+        private void m_onFoldoutToggled(ChangeEvent<bool> evt)
+        {
+            _valueContainer.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private void m_showFieldElement()
+        {
+            foreach (var item in _fieldInfos)
+            {
+                List<ICustomDrawer> drawerList = MicroContextEditorUtils.GetDrawers(item);
+                drawerList.Sort(Comparer<ICustomDrawer>.Default);
+                foreach (var drawer in drawerList)
+                {
+                    try
+                    {
+                        var element = drawer.DrawUI(this, item);
+                        if (element != null)
+                            _valueContainer.Add(element);
+                    }
+                    catch (Exception ex)
+                    {
+                        MicroContext.logger.LogError($"对象{Value.GetType().Name},字段{item.Name},CustomDrawer执行失败:{ex.Message}");
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region 其他方法
+
+        private void m_analyzeFileInfos()
+        {
+            _fieldInfos.Clear();
+            if (Value == null)
+                return;
+            var fields = Value.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            foreach (var field in fields)
+            {
+                if (field.GetCustomAttribute<NonSerializedAttribute>() != null)
+                    continue;
+                if (field.GetCustomAttribute<IgnoreAttribute>() != null)
+                    continue;
+                bool canSerialized = field.IsPublic || field.GetCustomAttribute<SerializeField>() != null || field.GetCustomAttribute<SerializeReference>() != null;
+                if (!canSerialized)
+                    continue;
+                _fieldInfos.Add(field);
+            }
+        }
+
+        private bool m_buildInType(Type fieldType, bool isGeneric = false)
+        {
+            if (fieldType.IsArray)
+            {
+                if (isGeneric)
+                    return false;
+                else
+                    return m_buildInType(fieldType.GetElementType(), true);
+            }
+            if (fieldType.IsGenericType)
+            {
+                if (isGeneric)
+                    return false;
+                if (fieldType.GetGenericTypeDefinition() == typeof(List<>))
+                    return m_buildInType(fieldType.GetGenericArguments()[0], true);
+                else
+                    return false;
+            }
+            if (fieldType.IsClass && !fieldType.IsAbstract)
+                return true;
+            if (fieldType.IsEnum)
+                return true;
+            if (fieldType.IsPrimitive)
+                return true;
+            return _unityTypes.Contains(fieldType);
+        }
+
+        #endregion
+    }
+}
 //    /// <summary>
 //    /// 通用对象查看器 - 支持嵌套结构/集合类型/自定义绘制器
 //    /// </summary>

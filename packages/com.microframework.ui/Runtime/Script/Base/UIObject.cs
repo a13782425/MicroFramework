@@ -10,7 +10,7 @@ namespace MFramework.UI
     public abstract partial class UIObject : IBindable
     {
         private GameObject _gameObject;
-        public GameObject gameObject
+        public GameObject GameObject
         {
             get => _gameObject;
             internal set
@@ -24,7 +24,7 @@ namespace MFramework.UI
         /// <summary>
         /// 日志对象
         /// </summary>
-        protected IMicroLogger logger => _logger;
+        protected IMicroLogger Logger => _logger;
         protected UIObject()
         {
             _instanceId = UIModuleUtils.GetInstanceId();
@@ -32,9 +32,9 @@ namespace MFramework.UI
         }
         private int _instanceId = 0;
         private Transform _transform;
-        public Transform transform => _transform;
+        public Transform Transform => _transform;
         private RectTransform _rectTransform;
-        public RectTransform rectTransform => _rectTransform;
+        public RectTransform RectTransform => _rectTransform;
 
         ~UIObject()
         {

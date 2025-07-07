@@ -30,7 +30,7 @@ namespace MFramework.Core
         {
             get
             {
-                if (_type != null)
+                if (_type != null && _type.FullName == TypeName)
                     return _type;
                 if (string.IsNullOrEmpty(AssemblyName) || string.IsNullOrEmpty(TypeName))
                     return null;

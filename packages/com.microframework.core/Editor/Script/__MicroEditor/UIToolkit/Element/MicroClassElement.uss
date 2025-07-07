@@ -1,0 +1,22 @@
+VisualElement {
+/* 	-unity-font: resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium");
+    -unity-font-definition : resource("__MicroEditor/UIToolkit/Markdown/Alibaba-PuHuiTi-Medium"); */
+	-unity-font: url("../Markdown/Alibaba-PuHuiTi-Medium.ttf");
+    -unity-font-definition : url("../Markdown/Alibaba-PuHuiTi-Medium SDF.asset");
+	font-size: 14px;
+}
+
+MicroClassElement > .unity-base-field__input{
+	min-width: 0px;
+	flex-grow: 0;
+}
+
+MicroClassElement > MicroDropdownField{
+	flex-grow: 1;
+}
+MicroClassElement > .micro-class-element__assembly-dp-field{
+	width: 38%;
+}
+MicroClassElement > .micro-class-element__class-dp-field{
+	width: 58%;
+}

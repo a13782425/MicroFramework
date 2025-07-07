@@ -13,14 +13,14 @@ namespace MFramework.Core.Editor
     /// 树形视图节点
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public sealed class MTreeViewItemData
+    public sealed class MTreeItemData
     {
         private readonly object _data;
 
-        private readonly List<MTreeViewItemData> _children;
+        private readonly List<MTreeItemData> _children;
         public object Data => _data;
 
-        public List<MTreeViewItemData> Children => _children;
+        public List<MTreeItemData> Children => _children;
 
         public bool HasChildren => _children != null && _children.Count > 0;
 
@@ -31,25 +31,25 @@ namespace MFramework.Core.Editor
         /// </summary>
         internal int Index { get; set; }
 
-        internal MTreeViewItemData Parent { get; private set; }
+        internal MTreeItemData Parent { get; private set; }
 
-        public MTreeViewItemData(object data, List<MTreeViewItemData> children = null)
+        public MTreeItemData(object data, List<MTreeItemData> children = null)
         {
             _data = data;
-            _children = new List<MTreeViewItemData>();
+            _children = new List<MTreeItemData>();
             if (children != null)
                 AddChildren(children);
         }
-        public void AddChild(MTreeViewItemData child)
+        public void AddChild(MTreeItemData child)
         {
             if (child.Parent != null)
                 child.Parent.RemoveChild(child);
             child.Parent = this;
             _children.Add(child);
         }
-        public void AddChildren(IList<MTreeViewItemData> children)
+        public void AddChildren(IList<MTreeItemData> children)
         {
-            foreach (MTreeViewItemData child in children)
+            foreach (MTreeItemData child in children)
             {
                 if (child.Parent != null)
                     child.Parent.RemoveChild(child);
@@ -57,10 +57,16 @@ namespace MFramework.Core.Editor
             }
         }
 
-        public void RemoveChild(MTreeViewItemData child)
+        public void RemoveChild(MTreeItemData child)
         {
             if (_children.Remove(child) && child.Parent == this)
                 child.Parent = null;
+        }
+        public void ClearChildren()
+        {
+            foreach (MTreeItemData child in _children)
+                child.Parent = null;
+            _children.Clear();
         }
     }
 
@@ -69,7 +75,7 @@ namespace MFramework.Core.Editor
     /// </summary>
     public class MTreeView : VisualElement
     {
-        private const string STYLE_SHEET = "UIToolkit\\Element\\MTreeView";
+        private const string STYLE_SHEET = "UIToolkit/Element/MTreeView.uss";
 
         private const string USS_BASE_CLASS = "mtree-view";
         private const string USS_TREE_LISTVIEW_CLASS = USS_BASE_CLASS + "__listview";
@@ -83,14 +89,14 @@ namespace MFramework.Core.Editor
         private ListView _listView;
         private ScrollView _listViewScroll;
         private List<TreeViewItemWrapper> _itemWrappers = new List<TreeViewItemWrapper>();
-        private List<MTreeViewItemData> _items = new List<MTreeViewItemData>();
-        public List<MTreeViewItemData> RootItems => _items;
+        private List<MTreeItemData> _items = new List<MTreeItemData>();
+        public List<MTreeItemData> RootItems => _items;
         public float FixedItemHeight { get => _listView.fixedItemHeight; set => _listView.fixedItemHeight = value; }
         public SelectionType SelectionType { get => _listView.selectionType; set => _listView.selectionType = value; }
         public int SelectedIndex { get => _listView.selectedIndex; set => _listView.selectedIndex = value; }
 
-        private Action<VisualElement, MTreeViewItemData> _onBindItem;
-        public Action<VisualElement, MTreeViewItemData> onBindItem
+        private Action<VisualElement, MTreeItemData> _onBindItem;
+        public Action<VisualElement, MTreeItemData> onBindItem
         {
             get => _onBindItem;
             set
@@ -146,27 +152,22 @@ namespace MFramework.Core.Editor
         private Action<VisualElement> _onDestroyItem;
         public Action<VisualElement> onDestroyItem { get => _onDestroyItem; set => _onDestroyItem = value; }
 
-        private Action<VisualElement, MTreeViewItemData> _onUnbindItem;
-        public Action<VisualElement, MTreeViewItemData> onUnbindItem { get => _onUnbindItem; set => _onUnbindItem -= value; }
+        private Action<VisualElement, MTreeItemData> _onUnbindItem;
+        public Action<VisualElement, MTreeItemData> onUnbindItem { get => _onUnbindItem; set => _onUnbindItem -= value; }
 
         /// <summary>
         /// 双击树节点
         /// </summary>
-        public event Action<IEnumerable<MTreeViewItemData>> onItemsChosen;
+        public event Action<IEnumerable<MTreeItemData>> onItemsChosen;
         /// <summary>
         /// 选中树节点
         /// </summary>
-        public event Action<IEnumerable<MTreeViewItemData>> onSelectionChanged;
+        public event Action<IEnumerable<MTreeItemData>> onSelectionChanged;
 
         /// <summary>
         /// 打开列表
         /// </summary>
-        private HashSet<MTreeViewItemData> _expandedItems = new HashSet<MTreeViewItemData>();
-
-        /// <summary>
-        /// 树节点数据对应的索引
-        /// </summary>
-        private Dictionary<MTreeViewItemData, int> _itemIndexDict = new Dictionary<MTreeViewItemData, int>();
+        private HashSet<object> _expandedItems = new HashSet<object>();
 
         private bool _expandAll = false;
 
@@ -207,7 +208,7 @@ namespace MFramework.Core.Editor
         /// 设置根节点
         /// </summary>
         /// <param name="items"></param>
-        public void SetRootItems(IList<MTreeViewItemData> items)
+        public void SetRootItems(IList<MTreeItemData> items)
         {
             _items.Clear();
             _items.AddRange(items);
@@ -218,13 +219,13 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="item"></param>
         /// <param name="expandAllChildren"></param>
-        internal void ExpandItem(MTreeViewItemData item, bool expandAllChildren = false)
+        internal void ExpandItem(MTreeItemData item, bool expandAllChildren = false)
         {
             var parent = item.Parent;
             while (parent != null)
             {
-                if (!_expandedItems.Contains(parent))
-                    _expandedItems.Add(parent);
+                if (!_expandedItems.Contains(parent.Data))
+                    _expandedItems.Add(parent.Data);
                 parent = parent.Parent;
             }
             m_expandItem(item, expandAllChildren);
@@ -253,7 +254,7 @@ namespace MFramework.Core.Editor
         /// <summary>
         /// 折叠所有
         /// </summary>
-        public void CollapseItem(MTreeViewItemData item, bool collapseAllChildren = false)
+        public void CollapseItem(MTreeItemData item, bool collapseAllChildren = false)
         {
             m_collapseItem(item, collapseAllChildren);
             Rebuild();
@@ -265,10 +266,10 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="treeItem"></param>
         /// <param name="scrollToSelection"></param>
-        public void SetItemChosen(MTreeViewItemData treeItem, bool scrollToSelection = false)
+        public void SetItemChosen(MTreeItemData treeItem, bool scrollToSelection = false)
         {
             SetSelection(treeItem, scrollToSelection);
-            this.onItemsChosen?.Invoke(new List<MTreeViewItemData> { treeItem });
+            this.onItemsChosen?.Invoke(new List<MTreeItemData> { treeItem });
         }
         /// <summary>
         /// 设置选中并滚动到第一个节点
@@ -276,7 +277,7 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="treeItems"></param>
         /// <param name="scrollToSelection"></param>
-        public void SetItemChosen(List<MTreeViewItemData> treeItems, bool scrollToSelection = false)
+        public void SetItemChosen(List<MTreeItemData> treeItems, bool scrollToSelection = false)
         {
             SetSelection(treeItems, scrollToSelection);
             this.onItemsChosen?.Invoke(treeItems.ToList());
@@ -288,7 +289,7 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="treeItem"></param>
         /// <param name="scrollToSelection"></param>
-        public void SetSelection(MTreeViewItemData treeItem, bool scrollToSelection = false)
+        public void SetSelection(MTreeItemData treeItem, bool scrollToSelection = false)
         {
             _listView.SetSelection(new List<int> { treeItem.Index });
             if (scrollToSelection)
@@ -300,7 +301,7 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="treeItems"></param>
         /// <param name="scrollToSelection"></param>
-        public void SetSelection(List<MTreeViewItemData> treeItems, bool scrollToSelection = false)
+        public void SetSelection(List<MTreeItemData> treeItems, bool scrollToSelection = false)
         {
             _listView.SetSelection(treeItems.Select(a => a.Index));
             if (scrollToSelection)
@@ -313,7 +314,7 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="treeItem"></param>
         /// <param name="scrollToSelection"></param>
-        public void SetSelectionWithoutNotify(MTreeViewItemData treeItem, bool scrollToSelection = false)
+        public void SetSelectionWithoutNotify(MTreeItemData treeItem, bool scrollToSelection = false)
         {
             _listView.SetSelectionWithoutNotify(new List<int> { treeItem.Index });
             if (scrollToSelection)
@@ -325,7 +326,7 @@ namespace MFramework.Core.Editor
         /// </summary>
         /// <param name="treeItems"></param>
         /// <param name="scrollToSelection"></param>
-        public void SetSelectionWithoutNotify(List<MTreeViewItemData> treeItems, bool scrollToSelection = false)
+        public void SetSelectionWithoutNotify(List<MTreeItemData> treeItems, bool scrollToSelection = false)
         {
             _listView.SetSelectionWithoutNotify(treeItems.Select(a => a.Index));
             if (scrollToSelection)
@@ -334,7 +335,8 @@ namespace MFramework.Core.Editor
         /// <summary>
         /// 刷新列表
         /// </summary>
-        public void Rebuild()
+        /// <para>保留展开状态</para>
+        public void Rebuild(bool keepExpand = true)
         {
             m_generateWrappers();
             if (_listView != null)
@@ -356,9 +358,9 @@ namespace MFramework.Core.Editor
         /// <param name="treeViewItems"></param>
         /// <param name="depth"></param>
         /// <param name="list"></param>
-        private void m_createWrappers(List<MTreeViewItemData> treeViewItems, int depth, List<TreeViewItemWrapper> list)
+        private void m_createWrappers(List<MTreeItemData> treeViewItems, int depth, List<TreeViewItemWrapper> list)
         {
-            foreach (MTreeViewItemData item in treeViewItems)
+            foreach (MTreeItemData item in treeViewItems)
             {
                 TreeViewItemWrapper wrapper = default(TreeViewItemWrapper);
                 wrapper.Depth = depth;
@@ -367,8 +369,8 @@ namespace MFramework.Core.Editor
                 list.Add(wrapper);
                 if (_expandAll || (m_isExpanded(wrapper) && item.HasChildren))
                 {
-                    if (!_expandedItems.Contains(item))
-                        _expandedItems.Add(item);
+                    if (!_expandedItems.Contains(item.Data))
+                        _expandedItems.Add(item.Data);
                     m_createWrappers(item.Children, depth + 1, list);
                 }
             }
@@ -380,17 +382,17 @@ namespace MFramework.Core.Editor
         /// <returns></returns>
         private bool m_isExpanded(TreeViewItemWrapper wrapper)
         {
-            return _expandedItems.Contains(wrapper.Item);
+            return _expandedItems.Contains(wrapper.Item.Data);
         }
         /// <summary>
         /// 展开一个Item及其子项
         /// </summary>
         /// <param name="item"></param>
         /// <param name="expandAllChildren"></param>
-        private void m_expandItem(MTreeViewItemData item, bool expandAllChildren = false)
+        private void m_expandItem(MTreeItemData item, bool expandAllChildren = false)
         {
-            if (!_expandedItems.Contains(item))
-                _expandedItems.Add(item);
+            if (!_expandedItems.Contains(item.Data))
+                _expandedItems.Add(item.Data);
             if (expandAllChildren)
             {
                 foreach (var child in item.Children)
@@ -408,20 +410,20 @@ namespace MFramework.Core.Editor
         {
             if (!wrapper.Item.HasChildren)
                 return;
-            if (_expandedItems.Contains(wrapper.Item))
+            if (_expandedItems.Contains(wrapper.Item.Data))
                 return;
 
             int index = _listView.itemsSource.IndexOf(wrapper);
             List<TreeViewItemWrapper> wrappers = new List<TreeViewItemWrapper>();
             m_createWrappers(wrapper.Item.Children, _itemWrappers[index].Depth + 1, wrappers);
             _itemWrappers.InsertRange(index + 1, wrappers);
-            _expandedItems.Add(wrapper.Item);
+            _expandedItems.Add(wrapper.Item.Data);
             _listView.Rebuild();
         }
-        private void m_collapseItem(MTreeViewItemData item, bool collapseAllChildren)
+        private void m_collapseItem(MTreeItemData item, bool collapseAllChildren)
         {
-            if (_expandedItems.Contains(item))
-                _expandedItems.Remove(item);
+            if (_expandedItems.Contains(item.Data))
+                _expandedItems.Remove(item.Data);
 
             if (collapseAllChildren)
             {
@@ -439,10 +441,10 @@ namespace MFramework.Core.Editor
         {
             if (!wrapper.Item.HasChildren)
                 return;
-            if (!_expandedItems.Contains(wrapper.Item))
+            if (!_expandedItems.Contains(wrapper.Item.Data))
                 return;
             int index = _listView.itemsSource.IndexOf(wrapper);
-            _expandedItems.Remove(wrapper.Item);
+            _expandedItems.Remove(wrapper.Item.Data);
             int num = 0;
             int i = index + 1;
             for (int depth = wrapper.Depth; i < _itemWrappers.Count && _itemWrappers[i].Depth > depth; i++)
@@ -496,7 +498,7 @@ namespace MFramework.Core.Editor
         {
 
             IEnumerable<TreeViewItemWrapper> wrapper = enumerable.OfType<TreeViewItemWrapper>();
-            IEnumerable<MTreeViewItemData> items = wrapper.Select(a => a.Item);
+            IEnumerable<MTreeItemData> items = wrapper.Select(a => a.Item);
 
             wrapper.ToList().ForEach(item =>
             {
@@ -579,7 +581,7 @@ namespace MFramework.Core.Editor
             internal void BindItem(TreeViewItemWrapper itemWrapper)
             {
                 _itemWrapper = itemWrapper;
-                MTreeViewItemData item = itemWrapper.Item;
+                MTreeItemData item = itemWrapper.Item;
                 _indentVisualElement.style.width = itemWrapper.Depth * 16;
                 _collapseToggle.SetValueWithoutNotify(_treeView.m_isExpanded(itemWrapper));
                 _collapseToggle.userData = itemWrapper;
@@ -589,7 +591,7 @@ namespace MFramework.Core.Editor
 
             internal void UnbindItem()
             {
-                MTreeViewItemData item = _itemWrapper.Item;
+                MTreeItemData item = _itemWrapper.Item;
                 _itemWrapper = TreeViewItemWrapper.Empty;
                 if (item != null)
                     _treeView._onUnbindItem?.Invoke(_customElement, item);
@@ -605,7 +607,7 @@ namespace MFramework.Core.Editor
         {
             public int Depth;
 
-            public MTreeViewItemData Item;
+            public MTreeItemData Item;
 
             //public int index;
 

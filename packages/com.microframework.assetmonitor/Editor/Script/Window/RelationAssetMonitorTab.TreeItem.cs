@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static MFramework.AssetMonitor.AssetMonitorConst;
@@ -27,6 +28,7 @@ namespace MFramework.AssetMonitor
             private Button _depButton;
 
             private AssetInfoRecord _record;
+            private MTreeItemData _treeItemData;
             private List<CommandInfo> _commands = new List<CommandInfo>();
             private readonly RelationAssetMonitorTab _projectAssetMonitorTab;
             public FolderTreeItemView(RelationAssetMonitorTab tab)
@@ -68,9 +70,12 @@ namespace MFramework.AssetMonitor
                 this.AddManipulator(new ContextualMenuManipulator(m_buildContextMenu));
             }
 
-            internal void Refresh(AssetInfoRecord assetRecord)
+            internal void Refresh(MTreeItemData item)
             {
-                _record = assetRecord;
+                _treeItemData = item;
+                _record = item.GetData<AssetInfoRecord>();
+                if (_record == null)
+                    return;
                 _refButton.text = AssetMonitorTools.FormatRefCount(_record.ReferenceRelations.Count);
                 _depButton.text = AssetMonitorTools.FormatRefCount(_record.DependencyRelations.Count);
                 // 设置图标
@@ -106,7 +111,7 @@ namespace MFramework.AssetMonitor
                 {
                     if (!item.Value.IsEnabled)
                         continue;
-                    if (item.Value.Command.OnFilter(this._record.Guid, CommandType.Folder))
+                    if (item.Value.Command.OnFilter(this._record, CommandType.Folder))
                         _commands.Add(item.Value);
                 }
                 _commands.Sort((a, b) => a.Command.Priority.CompareTo(b.Command.Priority));
@@ -121,8 +126,28 @@ namespace MFramework.AssetMonitor
                 CommandInfo info = action.userData as CommandInfo;
                 if (info == null || _record == null)
                     return;
-                info.Command.OnExecute(_record.Guid, CommandType.Folder);
+                var clone = m_cloneAssetTree(this._record, null, _treeItemData);
+                info.Command.OnExecute(clone, CommandType.Folder);
+                AssetInfoRecord.PoolReturn(clone);
             }
+
+            private AssetInfoRecord m_cloneAssetTree(AssetInfoRecord curRecord, AssetInfoRecord parent = null, MTreeItemData treeItem = null)
+            {
+                AssetInfoRecord root = (AssetInfoRecord)curRecord.Clone();
+                root.Parent = parent;
+                if (treeItem.HasChildren)
+                {
+                    foreach (var item in treeItem.Children)
+                    {
+                        if (item.Data is AssetInfoRecord child)
+                        {
+                            root.Childs.Add(m_cloneAssetTree(child, root, item));
+                        }
+                    }
+                }
+                return root;
+            }
+
         }
 
         public class ReferenceTreeItemView : VisualElement
@@ -266,7 +291,7 @@ namespace MFramework.AssetMonitor
                 {
                     if (!item.Value.IsEnabled)
                         continue;
-                    if (item.Value.Command.OnFilter(this._record.Guid, CommandType.Relation))
+                    if (item.Value.Command.OnFilter(this._record, CommandType.Relation))
                         _commands.Add(item.Value);
                 }
                 _commands.Sort((a, b) => a.Command.Priority.CompareTo(b.Command.Priority));
@@ -281,9 +306,40 @@ namespace MFramework.AssetMonitor
                 CommandInfo info = action.userData as CommandInfo;
                 if (info == null || _record == null)
                     return;
-                info.Command.OnExecute(_record.Guid, CommandType.Relation);
+                var clone = m_cloneAssetTree();
+                info.Command.OnExecute(clone, CommandType.Folder);
+                AssetInfoRecord.PoolReturn(clone);
             }
+            private AssetInfoRecord m_cloneAssetTree()
+            {
+                var rootItem = _projectAssetMonitorTab._referenceTreeView.RootItems.FirstOrDefault();
+                if (rootItem == null)
+                    return (AssetInfoRecord)_record.Clone();
+                var rootRelation = rootItem.GetData<RelationInfo>();
+                if (rootRelation == null)
+                    return (AssetInfoRecord)_record.Clone();
+                if (rootRelation.Guid != _record.Guid)
+                    return (AssetInfoRecord)_record.Clone();
 
+                AssetInfoRecord root = (AssetInfoRecord)_record.Clone();
+                root.Parent = null;
+
+                if (rootItem.HasChildren)
+                {
+                    foreach (var item in rootItem.Children)
+                    {
+                        if (item.Data is RelationInfo child)
+                        {
+                            var childInfo = AssetMonitorTools.GetRecordByGuid(child.Guid).Clone() as AssetInfoRecord;
+                            if (childInfo == null)
+                                continue;
+                            childInfo.Parent = root;
+                            root.Childs.Add(childInfo);
+                        }
+                    }
+                }
+                return root;
+            }
         }
 
     }

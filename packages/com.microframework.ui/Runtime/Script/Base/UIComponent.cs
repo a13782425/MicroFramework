@@ -17,7 +17,7 @@ namespace MFramework.UI
         public UIComponent(UIView view, T element)
         {
             target = element;
-            this.gameObject = element.gameObject;
+            this.GameObject = element.gameObject;
             this.view = view;
         }
         [BindableField("可绑定属性")]

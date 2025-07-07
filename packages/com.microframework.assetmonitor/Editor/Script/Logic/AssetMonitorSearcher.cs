@@ -31,7 +31,7 @@ namespace MFramework.AssetMonitor
         /// <summary>
         /// 匹配
         /// </summary>
-        /// <param name="record">缓存的数据</param>
+        /// <param name="record">资源文件的记录(克隆值)</param>
         /// <param name="value">输入的参数</param>
         /// <returns>是否匹配</returns>
         bool Match(AssetInfoRecord record, string value);
@@ -209,29 +209,9 @@ namespace MFramework.AssetMonitor
         {
             if (record.IsFolder)
                 return value == "folder" || value == "directory" || value == "dir";
-            var extension = Path.GetExtension(record.AssetPath).ToLower();
+            var typeName = record.AssetType.ToLower();
 
-            return value switch
-            {
-                "script" => extension == ".cs" || extension == ".js" || extension == ".ts",
-                "shader" => extension == ".shader" || extension == ".hlsl" || extension == ".cginc" || extension == ".compute",
-                "material" => extension == ".mat",
-                "prefab" => extension == ".prefab",
-                "scene" => extension == ".unity",
-                "texture" => extension == ".png" || extension == ".jpg" || extension == ".jpeg" ||
-                            extension == ".tga" || extension == ".bmp" || extension == ".gif" ||
-                            extension == ".psd" || extension == ".tiff",
-                "model" => extension == ".fbx" || extension == ".obj" || extension == ".dae" ||
-                          extension == ".3ds" || extension == ".blend",
-                "audio" => extension == ".wav" || extension == ".mp3" || extension == ".ogg" ||
-                          extension == ".aiff" || extension == ".flac",
-                "video" => extension == ".mp4" || extension == ".mov" || extension == ".avi" ||
-                          extension == ".webm" || extension == ".mkv",
-                "font" => extension == ".ttf" || extension == ".otf",
-                "text" => extension == ".json" || extension == ".xml" || extension == ".txt" ||
-                         extension == ".csv" || extension == ".md" || extension == ".bytes",
-                _ => extension.TrimStart('.') == value
-            };
+            return typeName.Contains(value, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -1,7 +1,4 @@
-using MFramework.Core;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -25,19 +22,42 @@ namespace MFramework.Runtime
             return Resources.Load(resPath, resType);
         }
 
-
         public ResHandler Load<T>(string resPath, ResLoadDelegate<T> callback, object arg = null) where T : Object
         {
-            T t = LoadSync<T>(resPath);
-            callback?.Invoke(t, arg);
-            return new ResHandler() { isDone = true, asset = t };
+            var resHandler = new ResHandler();
+            Resources.LoadAsync<T>(resPath).completed += (a) =>
+            {
+                if (a is ResourceRequest request)
+                {
+                    resHandler.Asset = request.asset;
+                    callback?.Invoke(request.asset as T, arg);
+                }
+                else
+                {
+                    callback?.Invoke(default(T), arg);
+                }
+                resHandler.IsDone = true;
+            };
+            return resHandler;
         }
 
         public ResHandler Load(string resPath, Type resType, ResLoadDelegate<Object> callback, object arg = null)
         {
-            Object obj = LoadSync(resPath, resType);
-            callback?.Invoke(obj, arg);
-            return new ResHandler() { isDone = true, asset = obj };
+            var resHandler = new ResHandler();
+            Resources.LoadAsync(resPath).completed += (a) =>
+            {
+                if (a is ResourceRequest request)
+                {
+                    resHandler.Asset = request.asset;
+                    callback?.Invoke(request.asset, arg);
+                }
+                else
+                {
+                    callback?.Invoke(default(Object), arg);
+                }
+                resHandler.IsDone = true;
+            };
+            return resHandler;
         }
 
         public void OnDestroy()
@@ -50,10 +70,6 @@ namespace MFramework.Runtime
             _isInit = true;
         }
 
-        public void OnLogicUpdate(float deltaTime)
-        {
-        }
-
         public void OnResume()
         {
         }
@@ -62,13 +78,9 @@ namespace MFramework.Runtime
         {
         }
 
-        public void OnUpdate(float deltaTime)
-        {
-        }
-
         public void UnloadAsset(string resPath, int reference = 1)
         {
-            
+            Resources.UnloadUnusedAssets();
         }
     }
 }

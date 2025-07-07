@@ -23,7 +23,7 @@ namespace MFramework.Core
     /// <summary>
     /// 微框架上下文
     /// </summary>
-    public static class MicroContext
+    public static partial class MicroContext
     {
         /// <summary>
         /// 模块接口类型
@@ -893,5 +893,13 @@ namespace MFramework.Core
         }
 
         #endregion
+    }
+
+    partial class MicroContext
+    {
+        /// <summary>
+        /// 游戏时间
+        /// </summary>
+        public static float GameTime => Time.realtimeSinceStartup;
     }
 }

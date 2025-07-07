@@ -20,7 +20,7 @@ namespace MFramework.Core.Editor
             public BaseMicroLayout microLayout { get; set; }
         }
 
-        private const string STYLE_SHEET = "UIToolkit\\MicroEditorWindow";
+        private const string STYLE_SHEET = "UIToolkit/MicroEditorWindow.uss";
 
 
         public MTreeView treeView { get; private set; }
@@ -376,7 +376,7 @@ namespace MFramework.Core.Editor
             treeView.ExpandItem(root);
             treeView.SetItemChosen(root, true);
         }
-        private void m_sortTreeView(List<MTreeViewItemData> items)
+        private void m_sortTreeView(List<MTreeItemData> items)
         {
             items.Sort((a, b) =>
             {
@@ -400,9 +400,9 @@ namespace MFramework.Core.Editor
                 }
             }
         }
-        private void m_generateLayoutModel(List<MTreeViewItemData> rootList)
+        private void m_generateLayoutModel(List<MTreeItemData> rootList)
         {
-            MTreeViewItemData rootTreeItem = new MTreeViewItemData(null);
+            MTreeItemData rootTreeItem = new MTreeItemData(null);
             //rootTreeItem.children.AddRange(rootList);
             foreach (MicroLayoutModel item in _microLayoutModels)
             {
@@ -414,11 +414,11 @@ namespace MFramework.Core.Editor
                     logger.LogError($"视图:{item.MicroLayout.Title}初始化失败");
                     continue;
                 }
-                MTreeViewItemData parent = rootTreeItem;
+                MTreeItemData parent = rootTreeItem;
                 for (int i = 0; i < item.TitleLayers.Length - 1; i++)
                 {
                     string group = item.TitleLayers[i];
-                    MTreeViewItemData itemData = parent.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == group);
+                    MTreeItemData itemData = parent.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == group);
                     if (itemData == null)
                     {
                         var tempItem = new MicroLayoutTreeItem();
@@ -427,7 +427,7 @@ namespace MFramework.Core.Editor
                         tempItem.microLayout.window = this;
                         tempItem.microLayout.panel = new VisualElement();
                         tempItem.microLayout.panel.name = "container";
-                        itemData = new MTreeViewItemData(tempItem);
+                        itemData = new MTreeItemData(tempItem);
                         parent.AddChild(itemData);
                     }
                     if (itemData.GetData<MicroLayoutTreeItem>().microLayout is DefaultMicroLayout defaultMicro)
@@ -437,19 +437,19 @@ namespace MFramework.Core.Editor
                     parent = itemData;
                 }
                 string curName = item.TitleLayers[item.TitleLayers.Length - 1];
-                MTreeViewItemData childItem = parent.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == curName);
+                MTreeItemData childItem = parent.Children.FirstOrDefault(a => a.GetData<MicroLayoutTreeItem>().name == curName);
                 if (childItem == null || (childItem.GetData<MicroLayoutTreeItem>()).microLayout is { } layout && layout.GetType() != typeof(DefaultMicroLayout))
                 {
                     var tempItem = new MicroLayoutTreeItem();
                     tempItem.name = curName;
-                    childItem = new MTreeViewItemData(tempItem);
+                    childItem = new MTreeItemData(tempItem);
                     parent.AddChild(childItem);
                 }
                 childItem.GetData<MicroLayoutTreeItem>().microLayout = item.MicroLayout;
             }
             rootList.AddRange(rootTreeItem.Children);
         }
-        private void m_onItemsChosen(IEnumerable<MTreeViewItemData> enumerable)
+        private void m_onItemsChosen(IEnumerable<MTreeItemData> enumerable)
         {
             var treeData = enumerable.FirstOrDefault();
             if (treeData == null)
@@ -476,7 +476,7 @@ namespace MFramework.Core.Editor
         {
             return new Label();
         }
-        private void m_onBindItem(VisualElement element, MTreeViewItemData item)
+        private void m_onBindItem(VisualElement element, MTreeItemData item)
         {
             Label label = element.Q<Label>();
             if (label != null)

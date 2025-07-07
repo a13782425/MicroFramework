@@ -1,9 +1,6 @@
 ﻿using MFramework.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace MFramework.Runtime
@@ -18,14 +15,52 @@ namespace MFramework.Runtime
         [SerializeReference]
         public List<IResourceCustomConfig> Configs = new List<IResourceCustomConfig>();
 
-        public IResourcePathProcessor PathProcessor { get; private set; }
-        public IResourcePatcher ResourcePatcher { get; private set; }
-        public ResourceRuntimeConfig()
+        private IResourcePathProcessor _pathProcessor;
+        public IResourcePathProcessor PathProcessor
+        {
+            get
+            {
+                if (_pathProcessor == null)
+                {
+                    m_createPathProcessor();
+                }
+                else
+                {
+                    if (_pathProcessor.GetType() != PathProcessorSerializer?.CurrentType)
+                    {
+                        m_createPathProcessor();
+                    }
+                }
+                return _pathProcessor;
+            }
+        }
+        private IResourcePatcher _patch;
+        public IResourcePatcher ResourcePatcher
+        {
+            get
+            {
+                if (_patch == null)
+                {
+                    m_createResourcePatcher();
+                }
+                else
+                {
+                    if (_patch.GetType() != ResourcePatchSerializer?.CurrentType)
+                    {
+                        m_createResourcePatcher();
+                    }
+                }
+                return _patch;
+            }
+        }
+
+
+        private void m_createPathProcessor()
         {
             Type tempType = PathProcessorSerializer?.CurrentType;
             if (tempType == null)
             {
-                PathProcessor = new DefaultResourcePathProcessor();
+                _pathProcessor = new DefaultResourcePathProcessor();
                 PathProcessorSerializer = new MicroClassSerializer()
                 {
                     AssemblyName = typeof(DefaultResourcePathProcessor).Assembly.FullName,
@@ -34,11 +69,14 @@ namespace MFramework.Runtime
                 MicroLogger.LogWarning($"{nameof(ResourceRuntimeConfig)}:{nameof(PathProcessorSerializer)}为空，使用默认值");
             }
             else
-                PathProcessor = Activator.CreateInstance(tempType) as IResourcePathProcessor;
-            tempType = ResourcePatchSerializer?.CurrentType;
+                _pathProcessor = Activator.CreateInstance(tempType) as IResourcePathProcessor;
+        }
+        private void m_createResourcePatcher()
+        {
+            Type tempType = ResourcePatchSerializer?.CurrentType;
             if (tempType == null)
             {
-                ResourcePatcher = new DefaultResourcePatch();
+                _patch = new DefaultResourcePatch();
                 ResourcePatchSerializer = new MicroClassSerializer()
                 {
                     AssemblyName = typeof(DefaultResourcePatch).Assembly.FullName,
@@ -47,9 +85,7 @@ namespace MFramework.Runtime
                 MicroLogger.LogWarning($"{nameof(ResourceRuntimeConfig)}:{nameof(ResourcePatchSerializer)}为空，使用默认值");
             }
             else
-                ResourcePatcher = Activator.CreateInstance(tempType) as IResourcePatcher;
+                _patch = Activator.CreateInstance(tempType) as IResourcePatcher;
         }
-
-    
     }
 }

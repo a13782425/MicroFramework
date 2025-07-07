@@ -27,7 +27,21 @@ namespace MFramework.Core
         /// <summary>
         /// 当前运行时配置
         /// </summary>
-        public static MicroRuntimeConfig CurrentConfig { get => _currentConfig; internal set => _currentConfig = value; }
+        public static MicroRuntimeConfig CurrentConfig
+        {
+            get => _currentConfig; internal set
+            {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value), "运行时配置不能为空，请先创建一个运行时配置文件。");
+
+                if (_currentConfig != value)
+                {
+                    _currentConfig = value;
+                    foreach (var item in value.Configs)
+                        item.Init();
+                }
+            }
+        }
 
         public MicroRuntimeConfig()
         {

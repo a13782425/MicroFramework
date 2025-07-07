@@ -45,18 +45,18 @@ namespace MFramework.AssetMonitor
         /// <summary>
         /// 过滤guid, 根据guid判断是否使用该右键指令
         /// </summary>
-        /// <param name="guid">资源文件的guid</param>
+        /// <param name="record">资源文件的记录(克隆值)</param>
         /// <param name="commandType">触发该指令的类型</param>
         /// <returns></returns>
-        bool OnFilter(string guid, CommandType commandType);
+        bool OnFilter(AssetInfoRecord record, CommandType commandType);
 
         /// <summary>
         /// 执行该条指令
         /// </summary>
-        /// <param name="guid">资源文件的guid</param>
+        /// <param name="record">资源文件的记录(克隆值)</param>
         /// <param name="commandType">触发该指令的类型</param>
         /// <returns>执行是否成功</returns>
-        bool OnExecute(string guid, CommandType commandType);
+        bool OnExecute(AssetInfoRecord record, CommandType commandType);
 
     }
 
@@ -66,9 +66,9 @@ namespace MFramework.AssetMonitor
 
         public string Description => "";
 
-        public bool OnExecute(string guid, CommandType commandType)
+        public bool OnExecute(AssetInfoRecord record, CommandType commandType)
         {
-            UnityObject obj = AssetDatabase.LoadAssetAtPath<UnityObject>(AssetDatabase.GUIDToAssetPath(guid));
+            UnityObject obj = AssetDatabase.LoadAssetAtPath<UnityObject>(record.AssetPath);
             if (obj != null)
             {
                 Selection.activeObject = obj;
@@ -78,7 +78,7 @@ namespace MFramework.AssetMonitor
             return false;
         }
 
-        public bool OnFilter(string guid, CommandType commandType) => true;
+        public bool OnFilter(AssetInfoRecord record, CommandType commandType) => true;
     }
 
     internal class OpenInFinderAssetCommand : IAssetMonitorCommand
@@ -86,14 +86,13 @@ namespace MFramework.AssetMonitor
         public string Name => "打开文件夹";
         public string Description => "";
 
-        public bool OnExecute(string guid, CommandType commandType)
+        public bool OnExecute(AssetInfoRecord record, CommandType commandType)
         {
-            string path = AssetDatabase.GUIDToAssetPath(guid);
-            EditorUtility.RevealInFinder(Path.GetDirectoryName(path));
+            EditorUtility.RevealInFinder(Path.GetDirectoryName(record.AssetPath));
             return false;
         }
 
-        public bool OnFilter(string guid, CommandType commandType) => true;
+        public bool OnFilter(AssetInfoRecord recor, CommandType commandType) => true;
     }
 
     internal class DeleteAssetCommand : IAssetMonitorCommand
@@ -101,14 +100,15 @@ namespace MFramework.AssetMonitor
         public string Name => "删除";
         public string Description => "";
 
-        public bool OnExecute(string guid, CommandType commandType)
+        int IAssetMonitorCommand.Priority => int.MaxValue;
+        public bool OnExecute(AssetInfoRecord record, CommandType commandType)
         {
-            string path = AssetDatabase.GUIDToAssetPath(guid);
+            string path = record.AssetPath;
             if (EditorUtility.DisplayDialog("提示", $"是否删除资源:{Path.GetFileName(path)} ", "删除", "关闭"))
                 return AssetDatabase.DeleteAsset(path);
             return true;
         }
 
-        public bool OnFilter(string guid, CommandType commandType) => commandType == CommandType.Folder;
+        public bool OnFilter(AssetInfoRecord record, CommandType commandType) => commandType == CommandType.Folder;
     }
 }

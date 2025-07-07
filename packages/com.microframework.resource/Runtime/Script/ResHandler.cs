@@ -8,33 +8,44 @@ namespace MFramework.Runtime
     /// </summary>
     public class ResHandler : IMicroTaskInstruction<Object>
     {
-        internal protected ResHandler()
+        public ResHandler()
         {
-            isDone = false;
-            isCancel = false;
-            asset = null;
+            IsDone = false;
+            IsCancel = false;
+            Asset = null;
+            ErrorMessage = null;
         }
         /// <summary>
         /// 加载是否完成
         /// </summary>
-        public bool isDone { get; internal protected set; }
+        public bool IsDone { get; set; }
         /// <summary>
         /// 是否取消加载
         /// </summary>
-        public bool isCancel { get; set; }
+        public bool IsCancel { get; set; }
         /// <summary>
         /// 加载完成的资源
         /// </summary>
-        public Object asset { get; internal protected set; }
+        public Object Asset { get; set; }
+
+        /// <summary>
+        /// 加载错误信息
+        /// </summary>
+        public string ErrorMessage { get; set; }
+
+        /// <summary>
+        /// 是否加载错误
+        /// </summary>
+        public bool IsError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
         public Object GetResult()
         {
-            return asset;
+            return Asset;
         }
 
         public bool IsCompleted()
         {
-            return isDone || isCancel;
+            return IsDone || IsCancel;
         }
     }
 }

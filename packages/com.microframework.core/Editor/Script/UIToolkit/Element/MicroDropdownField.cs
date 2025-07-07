@@ -140,7 +140,7 @@ namespace MFramework.Core.Editor
     }
     public sealed class MicroDropdownField : BaseField<string>
     {
-        const string STYLE_SHEET = "UIToolkit\\Element\\MicroDropdownField";
+        const string STYLE_SHEET = "UIToolkit/Element/MicroDropdownField.uss";
         private class WindowContent : PopupWindowContent
         {
             const string k_SelectionContextKey = "MicroDropdownField.SelectionContext";
